@@ -38,14 +38,36 @@ where email = 'admin@example.com';
 Migration tạo:
 
 - `movies`: metadata, loại `movie/series/anime/theatrical`, trạng thái `draft/published` và các trường trình bày đang dùng.
-- `movie_sources`: `provider`, `external_file_id`, `playback_mode`, thứ tự hiển thị; chưa tích hợp Google Drive hoặc URL phát.
+- `movie_sources`: nhà cung cấp, Google Drive File ID, chế độ phát, phạm vi phim/tập, trạng thái và thứ tự hiển thị.
 - Index, khóa ngoại cascade, trigger `updated_at`, grants và RLS theo nguyên tắc quyền tối thiểu.
+
+Sau migration đầu tiên, chạy thêm [`supabase/migrations/202610150002_add_drive_sources_and_episodes.sql`](supabase/migrations/202610150002_add_drive_sources_and_episodes.sql). Migration này thêm trạng thái/phạm vi nguồn phát, bảng `movie_episodes` và policy chỉ công khai nguồn đang hoạt động của nội dung đã xuất bản.
+
+## Video Google Drive
+
+Không cần Google OAuth hoặc Drive API cho chế độ iframe preview. Trong `/admin/database`:
+
+1. Tạo phim ở trạng thái `draft`, nhập link chia sẻ Drive rồi kiểm tra khung xem trước.
+2. Với phim lẻ, link Drive nằm ngay trong form phim.
+3. Với phim bộ/anime, lưu phim trước, sau đó thêm từng tập và link Drive tương ứng. Chỉ tập `published` của phim `published` mới xuất hiện công khai.
+4. Trong Google Drive, chọn **Chia sẻ → Quyền truy cập chung → Bất kỳ ai có đường liên kết → Người xem**. Thử URL `/watch/[slug]` trong cửa sổ ẩn danh trước khi xuất bản.
+
+Các định dạng được chấp nhận:
+
+```text
+https://drive.google.com/file/d/FILE_ID/view
+https://drive.google.com/open?id=FILE_ID
+https://drive.google.com/uc?id=FILE_ID
+```
+
+Ứng dụng chỉ lưu File ID và dựng URL `/preview`; không lưu access token/OAuth secret, không tải video qua Next.js và không proxy qua Vercel. File đặt ở chế độ “bất kỳ ai có link” không được bảo vệ bởi đăng nhập website. Google Drive có thể giới hạn lượt xem/băng thông và không cung cấp SLA streaming; khi quy mô tăng, giữ metadata hiện tại và thay provider bằng CDN/video platform chuyên dụng.
 
 ## Kiểm tra production
 
 ```bash
 npm run lint
 npm run typecheck
+npm test
 npm run build
 npm start
 ```

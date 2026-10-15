@@ -1,13 +1,27 @@
 export type ContentType = 'movie' | 'series' | 'anime';
 
+export type PlaybackProvider = 'google_drive' | 'direct';
+
+export interface PlaybackSource {
+  id: string;
+  provider: PlaybackProvider;
+  externalFileId: string;
+  playbackMode: 'preview' | 'direct';
+  label: string;
+  status: 'active' | 'inactive';
+  displayOrder: number;
+}
+
 export interface Episode {
   id: string;
   number: number;
+  seasonNumber?: number;
   title: string;
   overview?: string;
   runtime?: number;
   thumbnailUrl?: string;
   playbackUrl?: string;
+  source?: PlaybackSource;
 }
 
 export interface Season {
@@ -39,6 +53,7 @@ export interface Movie {
   contentType: ContentType;
   trailerUrl?: string;
   playbackUrl?: string;
+  playbackSources?: PlaybackSource[];
   cast?: CastMember[];
   director?: string;
   seasons?: Season[];

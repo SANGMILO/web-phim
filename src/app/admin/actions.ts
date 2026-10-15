@@ -3,9 +3,52 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/supabase/auth';
+import { parseGoogleDriveUrl } from '@/lib/google-drive';
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
+}
+
+function positiveInteger(formData: FormData, key: string, fallback?: number) {
+  const raw = text(formData, key);
+  if (!raw && fallback !== undefined) return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`${key} không hợp lệ.`);
+  return value;
+}
+
+function driveFileId(formData: FormData, required = false) {
+  const driveUrl = text(formData, 'drive_url');
+  if (!driveUrl && !required) return null;
+  const fileId = parseGoogleDriveUrl(driveUrl);
+  if (!fileId) throw new Error('Link Google Drive không hợp lệ. Chỉ chấp nhận link file từ drive.google.com.');
+  return fileId;
+}
+
+async function saveDriveSource(
+  supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'],
+  movieId: string,
+  fileId: string,
+  sourceId?: string,
+  displayOrder = 0,
+  scope: 'movie' | 'episode' = 'movie',
+  status: 'active' | 'inactive' = 'active',
+) {
+  const payload = {
+    movie_id: movieId,
+    provider: 'google_drive',
+    external_file_id: fileId,
+    playback_mode: 'preview',
+    label: 'Google Drive',
+    scope,
+    status,
+    display_order: displayOrder,
+  };
+  const result = sourceId
+    ? await supabase.from('movie_sources').update(payload).eq('id', sourceId).eq('movie_id', movieId).eq('scope', scope).select('id').single()
+    : await supabase.from('movie_sources').insert(payload).select('id').single();
+  if (result.error) throw new Error(result.error.message);
+  return result.data.id as string;
 }
 
 function moviePayload(formData: FormData) {
@@ -44,16 +87,113 @@ function moviePayload(formData: FormData) {
 export async function saveMovie(formData: FormData) {
   const { supabase } = await requireAdmin();
   const id = text(formData, 'id');
+  const fileId = driveFileId(formData);
+  const sourceStatus = text(formData, 'source_status') || 'active';
+  if (!['active', 'inactive'].includes(sourceStatus)) throw new Error('Trạng thái nguồn phát không hợp lệ.');
   const payload = moviePayload(formData);
   const result = id
-    ? await supabase.from('movies').update(payload).eq('id', id)
-    : await supabase.from('movies').insert(payload);
+    ? await supabase.from('movies').update(payload).eq('id', id).select('id').single()
+    : await supabase.from('movies').insert(payload).select('id').single();
 
   if (result.error) throw new Error(result.error.message);
+  const movieId = result.data.id as string;
+  const { data: existingSource, error: existingSourceError } = await supabase
+    .from('movie_sources')
+    .select('id')
+    .eq('movie_id', movieId)
+    .eq('scope', 'movie')
+    .eq('display_order', 0)
+    .maybeSingle();
+  if (existingSourceError) throw new Error(existingSourceError.message);
+  if (fileId) {
+    await saveDriveSource(supabase, movieId, fileId, existingSource?.id, 0, 'movie', sourceStatus as 'active' | 'inactive');
+  } else if (existingSource?.id) {
+    const { error } = await supabase.from('movie_sources').delete().eq('id', existingSource.id).eq('movie_id', movieId).eq('scope', 'movie');
+    if (error) throw new Error(error.message);
+  }
   revalidatePath('/');
   revalidatePath('/admin');
   revalidatePath('/admin/database');
-  redirect('/admin/database?saved=1');
+  revalidatePath(`/movie/${payload.slug}`);
+  revalidatePath(`/watch/${payload.slug}`);
+  redirect(`/admin/database?edit=${movieId}&saved=1`);
+}
+
+export async function saveEpisode(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const movieId = text(formData, 'movie_id');
+  const episodeId = text(formData, 'episode_id');
+  const fileId = driveFileId(formData, true);
+  const seasonNumber = positiveInteger(formData, 'season_number', 1);
+  const episodeNumber = positiveInteger(formData, 'episode_number');
+  const title = text(formData, 'episode_title');
+  const status = text(formData, 'episode_status');
+  const sourceStatus = text(formData, 'source_status') || 'active';
+  if (!movieId || !title || !['draft', 'published'].includes(status) || !['active', 'inactive'].includes(sourceStatus) || !fileId) {
+    throw new Error('Thông tin tập phim không hợp lệ.');
+  }
+
+  const { data: movie, error: movieError } = await supabase
+    .from('movies')
+    .select('id,slug,content_type')
+    .eq('id', movieId)
+    .single();
+  if (movieError || !movie || !['series', 'anime'].includes(movie.content_type)) {
+    throw new Error('Phim bộ không tồn tại hoặc không hợp lệ.');
+  }
+
+  let existingSourceId: string | undefined;
+  if (episodeId) {
+    const { data: existingEpisode, error: existingEpisodeError } = await supabase
+      .from('movie_episodes')
+      .select('source_id')
+      .eq('id', episodeId)
+      .eq('movie_id', movieId)
+      .single();
+    if (existingEpisodeError) throw new Error(existingEpisodeError.message);
+    existingSourceId = existingEpisode.source_id ?? undefined;
+  }
+  const sourceId = await saveDriveSource(supabase, movieId, fileId, existingSourceId, episodeNumber, 'episode', sourceStatus as 'active' | 'inactive');
+  const runtimeText = text(formData, 'episode_runtime');
+  const payload = {
+    movie_id: movieId,
+    season_number: seasonNumber,
+    episode_number: episodeNumber,
+    title,
+    description: text(formData, 'episode_description'),
+    thumbnail_url: text(formData, 'episode_thumbnail_url'),
+    runtime: runtimeText ? positiveInteger(formData, 'episode_runtime') : null,
+    source_id: sourceId,
+    status,
+  };
+  const result = episodeId
+    ? await supabase.from('movie_episodes').update(payload).eq('id', episodeId).eq('movie_id', movieId)
+    : await supabase.from('movie_episodes').insert(payload);
+  if (result.error) throw new Error(result.error.message);
+
+  revalidatePath('/admin/database');
+  revalidatePath(`/movie/${movie.slug}`);
+  revalidatePath(`/watch/${movie.slug}`);
+  redirect(`/admin/database?edit=${movieId}&episode_saved=1`);
+}
+
+export async function deleteEpisode(formData: FormData) {
+  const { supabase } = await requireAdmin();
+  const movieId = text(formData, 'movie_id');
+  const episodeId = text(formData, 'episode_id');
+  if (!movieId || !episodeId) throw new Error('Thiếu mã tập phim.');
+  const { data: deletedEpisode, error } = await supabase
+    .from('movie_episodes')
+    .delete()
+    .eq('id', episodeId)
+    .eq('movie_id', movieId)
+    .select('source_id')
+    .single();
+  if (error) throw new Error(error.message);
+  if (deletedEpisode.source_id) {
+    await supabase.from('movie_sources').delete().eq('id', deletedEpisode.source_id).eq('movie_id', movieId).eq('scope', 'episode');
+  }
+  revalidatePath('/admin/database');
 }
 
 export async function deleteMovie(formData: FormData) {

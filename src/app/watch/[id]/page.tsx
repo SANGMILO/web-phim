@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { movieService } from '@/lib/movies/movie-service';
-import { WatchPlayerClient } from './WatchPlayerClient';
+import { DriveWatchClient } from './DriveWatchClient';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -32,7 +32,7 @@ export default async function WatchPage({ params }: Props) {
 
   return (
     <Suspense fallback={<div className="container-main" style={{ paddingTop: '100px' }}>Đang tải trình phát...</div>}>
-      <WatchPlayerClient movie={movie} related={related} />
+      <DriveWatchClient movie={movie} related={related} />
     </Suspense>
   );
 }

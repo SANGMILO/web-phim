@@ -7,22 +7,29 @@ import type { Movie } from '@/types/movie';
 import { useWatchlist } from '@/components/providers/WatchlistProvider';
 import { TrailerModal } from '@/components/movie/TrailerModal';
 import { MovieImage } from '@/components/common/MovieImage';
+import { isReducedMotion } from '@/lib/animations/useAnimations';
 import gsap from 'gsap';
 
 interface HeroProps {
   movies: Movie[];
 }
 
+const AUTO_PLAY_INTERVAL = 6000; // 6 seconds per featured movie
+
 export function Hero({ movies }: HeroProps) {
   const [current, setCurrent] = useState(0);
   const [trailerOpen, setTrailerOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { has, toggle } = useWatchlist();
 
   const movie = movies[current] || null;
-
   const isMountedRef = useRef(true);
+  const isTransitioningRef = useRef(false);
+
+  // Touch tracking for mobile swipe
+  const touchStartXRef = useRef<number | null>(null);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -33,53 +40,91 @@ export function Hero({ movies }: HeroProps) {
 
   const goTo = useCallback(
     (index: number) => {
-      if (index === current || movies.length === 0) return;
+      if (movies.length === 0 || isTransitioningRef.current) return;
       const next = ((index % movies.length) + movies.length) % movies.length;
+      if (next === current) return;
 
-      // Animate out
+      isTransitioningRef.current = true;
+
+      // Animate out current movie text
       if (contentRef.current) {
-        const tl = gsap.timeline();
-        tl.to(contentRef.current.children, {
+        gsap.to(contentRef.current.children, {
           opacity: 0,
-          y: 20,
+          y: -15,
           duration: 0.3,
-          stagger: 0.03,
+          stagger: 0.02,
           ease: 'power2.in',
           onComplete: () => {
             if (isMountedRef.current) {
               setCurrent(next);
+              isTransitioningRef.current = false;
             }
           },
         });
       } else {
         if (isMountedRef.current) {
           setCurrent(next);
+          isTransitioningRef.current = false;
         }
       }
     },
     [current, movies.length],
   );
 
-  // Animate in on mount / change
+  // Animate in on mount / slide change
   useEffect(() => {
     if (!contentRef.current) return;
     const ctx = gsap.context(() => {
       const children = contentRef.current!.children;
       gsap.fromTo(
         children,
-        { opacity: 0, y: 30 },
+        { opacity: 0, y: 24 },
         {
           opacity: 1,
           y: 0,
-          duration: 0.7,
-          stagger: 0.08,
+          duration: 0.65,
+          stagger: 0.07,
           ease: 'cubic-bezier(0.22, 1, 0.36, 1)',
-          delay: 0.15,
+          delay: 0.1,
         },
       );
     }, heroRef);
     return () => ctx.revert();
   }, [current]);
+
+  // Automatic slide rotation (auto-scroll) with pause on hover / trailer modal
+  useEffect(() => {
+    if (movies.length <= 1 || isHovered || trailerOpen || isReducedMotion()) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      goTo(current + 1);
+    }, AUTO_PLAY_INTERVAL);
+
+    return () => clearInterval(timer);
+  }, [current, isHovered, trailerOpen, movies.length, goTo]);
+
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartXRef.current - touchEndX;
+
+    // Minimum swipe threshold
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        goTo(current + 1); // Swiped left -> next
+      } else {
+        goTo(current - 1); // Swiped right -> prev
+      }
+    }
+    touchStartXRef.current = null;
+  };
 
   if (!movie) return null;
 
@@ -94,15 +139,20 @@ export function Hero({ movies }: HeroProps) {
     <>
       <section
         ref={heroRef}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{
           position: 'relative',
           height: 'clamp(500px, 85svh, 900px)',
           overflow: 'hidden',
         }}
       >
-        {/* Backdrop */}
+        {/* Backdrop Artwork with subtle crossfade */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <MovieImage
+            key={movie.id}
             src={movie.backdropUrl}
             alt={movie.title}
             fallbackTitle={movie.title}
@@ -115,7 +165,7 @@ export function Hero({ movies }: HeroProps) {
               transition: 'opacity 0.8s ease',
             }}
           />
-          {/* Gradient overlays */}
+          {/* Gradient overlays for cinematic text readability */}
           <div
             style={{
               position: 'absolute',
@@ -268,7 +318,7 @@ export function Hero({ movies }: HeroProps) {
           </div>
         </div>
 
-        {/* Carousel Controls */}
+        {/* Carousel Controls with Animated Progress Indicators */}
         {movies.length > 1 && (
           <div
             style={{
@@ -289,24 +339,47 @@ export function Hero({ movies }: HeroProps) {
             >
               <ChevronLeft size={20} />
             </button>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {movies.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goTo(i)}
-                  aria-label={`Phim ${i + 1}`}
-                  style={{
-                    width: i === current ? '28px' : '8px',
-                    height: '8px',
-                    borderRadius: '4px',
-                    background: i === current ? 'var(--accent-crimson)' : 'rgba(255,255,255,0.3)',
-                    transition: 'all 0.4s var(--easing-cinematic)',
-                    cursor: 'pointer',
-                    border: 'none',
-                  }}
-                />
-              ))}
+
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {movies.map((_, i) => {
+                const isActive = i === current;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    aria-label={`Chuyển đến phim ${i + 1}`}
+                    style={{
+                      width: isActive ? '36px' : '8px',
+                      height: '8px',
+                      borderRadius: '4px',
+                      background: 'rgba(255,255,255,0.25)',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      transition: 'width 0.4s var(--easing-cinematic)',
+                      cursor: 'pointer',
+                      border: 'none',
+                      padding: 0,
+                    }}
+                  >
+                    {isActive && (
+                      <span
+                        key={`progress-${current}`}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'var(--accent-crimson)',
+                          borderRadius: '4px',
+                          transformOrigin: 'left',
+                          animation: `heroTimer ${AUTO_PLAY_INTERVAL}ms linear forwards`,
+                          animationPlayState: isHovered || trailerOpen ? 'paused' : 'running',
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
+
             <button
               className="btn-icon"
               onClick={() => goTo(current + 1)}
@@ -327,6 +400,18 @@ export function Hero({ movies }: HeroProps) {
           onClose={() => setTrailerOpen(false)}
         />
       )}
+
+      {/* Progress Bar Animation Keyframes */}
+      <style jsx global>{`
+        @keyframes heroTimer {
+          0% {
+            transform: scaleX(0);
+          }
+          100% {
+            transform: scaleX(1);
+          }
+        }
+      `}</style>
     </>
   );
 }

@@ -1,4 +1,11 @@
-import type { ContentType, Movie, MovieFilter } from '@/types/movie';
+import type {
+  ContentType,
+  Episode,
+  Movie,
+  MovieFilter,
+  PlaybackProvider,
+  PlaybackSource,
+} from '@/types/movie';
 import type { MovieProvider } from './movie-provider';
 import { createPublicClient } from '@/lib/supabase/public';
 import { demoMovies } from '@/data/demo-movies';
@@ -26,7 +33,64 @@ interface MovieRow {
   status: 'draft' | 'published';
 }
 
-function toMovie(row: MovieRow): Movie {
+interface SourceRow {
+  id: string;
+  movie_id: string;
+  provider: PlaybackProvider;
+  external_file_id: string;
+  playback_mode: 'preview' | 'direct';
+  label: string;
+  status: 'active' | 'inactive';
+  display_order: number;
+}
+
+interface EpisodeRow {
+  id: string;
+  movie_id: string;
+  season_number: number;
+  episode_number: number;
+  title: string;
+  description: string;
+  thumbnail_url: string;
+  runtime: number | null;
+  source_id: string | null;
+}
+
+function toSource(row: SourceRow): PlaybackSource {
+  return {
+    id: row.id,
+    provider: row.provider,
+    externalFileId: row.external_file_id,
+    playbackMode: row.playback_mode,
+    label: row.label,
+    status: row.status,
+    displayOrder: row.display_order,
+  };
+}
+
+function toMovie(
+  row: MovieRow,
+  sources: SourceRow[] = [],
+  episodes: EpisodeRow[] = [],
+): Movie {
+  const movieSources = sources
+    .filter((source) => source.movie_id === row.id && source.status === 'active')
+    .sort((a, b) => a.display_order - b.display_order);
+  const sourceById = new Map(movieSources.map((source) => [source.id, toSource(source)]));
+  const movieEpisodes: Episode[] = episodes
+    .filter((episode) => episode.movie_id === row.id)
+    .sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number)
+    .map((episode) => ({
+      id: episode.id,
+      number: episode.episode_number,
+      seasonNumber: episode.season_number,
+      title: episode.title,
+      overview: episode.description || undefined,
+      thumbnailUrl: episode.thumbnail_url || undefined,
+      runtime: episode.runtime ?? undefined,
+      source: episode.source_id ? sourceById.get(episode.source_id) : undefined,
+    }));
+
   return {
     id: row.id,
     slug: row.slug,
@@ -49,6 +113,8 @@ function toMovie(row: MovieRow): Movie {
     featured: row.featured,
     trending: row.trending,
     inTheaters: row.content_type === 'theatrical',
+    playbackSources: movieSources.map(toSource),
+    episodes: movieEpisodes,
   };
 }
 
@@ -68,7 +134,31 @@ export class SupabaseMovieProvider implements MovieProvider {
     if (!data?.length) {
       return demoMovies.map((movie) => ({ ...movie, isDemo: true }));
     }
-    return (data as MovieRow[]).map(toMovie);
+    const movieRows = data as MovieRow[];
+    const movieIds = movieRows.map((movie) => movie.id);
+    const [{ data: sourceData, error: sourceError }, { data: episodeData, error: episodeError }] =
+      await Promise.all([
+        supabase
+          .from('movie_sources')
+          .select('id,movie_id,provider,external_file_id,playback_mode,label,status,display_order')
+          .in('movie_id', movieIds)
+          .eq('status', 'active')
+          .order('display_order'),
+        supabase
+          .from('movie_episodes')
+          .select('id,movie_id,season_number,episode_number,title,description,thumbnail_url,runtime,source_id')
+          .in('movie_id', movieIds)
+          .eq('status', 'published')
+          .order('season_number')
+          .order('episode_number'),
+      ]);
+
+    if (sourceError) console.error(`Không thể đọc nguồn phát: ${sourceError.message}`);
+    if (episodeError) console.error(`Không thể đọc tập phim: ${episodeError.message}`);
+
+    return movieRows.map((row) =>
+      toMovie(row, (sourceData as SourceRow[] | null) ?? [], (episodeData as EpisodeRow[] | null) ?? []),
+    );
   }
 
   async getFeatured() { return (await this.rows()).filter((m) => m.featured); }
