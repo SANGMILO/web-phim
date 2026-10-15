@@ -62,6 +62,7 @@ for each row execute function public.set_updated_at();
 
 alter table public.movie_episodes enable row level security;
 
+grant select on public.movie_sources to anon, authenticated;
 revoke all on public.movie_episodes from anon, authenticated;
 grant select on public.movie_episodes to anon, authenticated;
 grant insert, update, delete on public.movie_episodes to authenticated;
