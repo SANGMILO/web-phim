@@ -107,6 +107,8 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
 
   // Reset user server override when switching episodes or movies
   useEffect(() => {
+    // This local override intentionally resets when the playback identity changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setUserServer(null);
   }, [currentEpNumber, movie?.id]);
 
