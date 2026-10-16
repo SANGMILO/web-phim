@@ -16,9 +16,12 @@ Các biến cần cấu hình:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+TMDB_API_KEY=your_server_only_tmdb_api_key
 ```
 
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` được phép dùng ở browser và chỉ có quyền do RLS cấp. Không thêm Supabase secret key/service-role key vào biến `NEXT_PUBLIC_*` hoặc repository.
+
+`TMDB_API_KEY` chỉ dùng phía server cho chức năng tra cứu metadata trong trang admin. Không đặt khóa này trong biến `NEXT_PUBLIC_*` và không commit giá trị thật.
 
 ## Supabase
 

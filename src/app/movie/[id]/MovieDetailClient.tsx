@@ -115,6 +115,16 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
               {movie.quality && movie.quality !== 'N/A' && (
                 <span className="badge badge-quality">{movie.quality}</span>
               )}
+              {movie.episodeCurrent && (
+                <span className="badge" style={{ background: 'rgba(229,57,79,0.2)', color: 'var(--accent-crimson)', border: '1px solid rgba(229,57,79,0.4)', fontWeight: 700 }}>
+                  {movie.episodeCurrent}
+                </span>
+              )}
+              {(movie.gdriveUrl || (movie.playbackUrl && movie.playbackUrl.includes('drive.google.com'))) && (
+                <span className="badge" style={{ background: 'rgba(46,213,115,0.15)', color: '#2ed573', border: '1px solid rgba(46,213,115,0.3)' }}>
+                  Google Drive VIP
+                </span>
+              )}
               {movie.rating && (
                 <span className="badge badge-rating" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Star size={10} fill="#FFC107" /> {movie.rating}

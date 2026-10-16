@@ -21,6 +21,7 @@ export interface Episode {
   runtime?: number;
   thumbnailUrl?: string;
   playbackUrl?: string;
+  gdriveUrl?: string;
   source?: PlaybackSource;
 }
 
@@ -53,6 +54,8 @@ export interface Movie {
   contentType: ContentType;
   trailerUrl?: string;
   playbackUrl?: string;
+  gdriveUrl?: string;
+  episodeCurrent?: string;
   playbackSources?: PlaybackSource[];
   cast?: CastMember[];
   director?: string;

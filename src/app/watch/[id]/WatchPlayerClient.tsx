@@ -25,6 +25,7 @@ import { useWatchlist } from '@/components/providers/WatchlistProvider';
 import { watchHistoryService } from '@/lib/watch-history';
 import { MovieRail } from '@/components/movie/MovieRail';
 import { MovieImage } from '@/components/common/MovieImage';
+import { toGoogleDriveEmbedUrl, isGoogleDriveUrl } from '@/lib/utils/google-drive';
 
 interface WatchPlayerClientProps {
   movie: Movie;
@@ -49,6 +50,15 @@ export function WatchPlayerClient({ movie, related }: WatchPlayerClientProps) {
   const currentEpNumber = epParam ? parseInt(epParam, 10) : 1;
   const currentEpisode = allEpisodes.find((e) => e.number === currentEpNumber) || allEpisodes[0] || null;
 
+  // Resolve Google Drive stream URL if available
+  const rawGdrive =
+    currentEpisode?.gdriveUrl ||
+    movie.gdriveUrl ||
+    (isGoogleDriveUrl(currentEpisode?.playbackUrl) ? currentEpisode?.playbackUrl : null) ||
+    (isGoogleDriveUrl(movie.playbackUrl) ? movie.playbackUrl : null);
+  const gdriveSource = toGoogleDriveEmbedUrl(rawGdrive);
+  const hasGdrive = Boolean(gdriveSource);
+
   // Video state
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -63,10 +73,12 @@ export function WatchPlayerClient({ movie, related }: WatchPlayerClientProps) {
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isCopied, setIsCopied] = useState(false);
 
-  // Trailers are explicitly labeled; playback is shown only when a real source exists.
-  const [selectedServer, setSelectedServer] = useState<'official' | 'stream'>(
-    movie.trailerUrl ? 'official' : 'stream'
-  );
+  // User manual server override
+  const [userServer, setUserServer] = useState<'gdrive' | 'official' | 'stream' | null>(null);
+
+  // Derived effective server
+  const selectedServer = userServer ?? (hasGdrive ? 'gdrive' : movie.trailerUrl ? 'official' : 'stream');
+  const setSelectedServer = (srv: 'gdrive' | 'official' | 'stream') => setUserServer(srv);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -218,23 +230,45 @@ export function WatchPlayerClient({ movie, related }: WatchPlayerClientProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)', marginRight: '6px' }}>
             <Server size={14} /> Nguồn phát:
           </div>
+
+          {hasGdrive && (
+            <button
+              onClick={() => setSelectedServer('gdrive')}
+              className={`chip ${selectedServer === 'gdrive' ? 'chip-active' : ''}`}
+              style={{
+                fontSize: '12px',
+                padding: '6px 14px',
+                fontWeight: 700,
+                background: selectedServer === 'gdrive' ? '#2ed573' : undefined,
+                color: selectedServer === 'gdrive' ? '#08090C' : undefined,
+              }}
+            >
+              <Tv size={13} style={{ display: 'inline', marginRight: '5px' }} />
+              Server VIP 1 (Google Drive)
+            </button>
+          )}
+
           {movie.trailerUrl && (
             <button
               onClick={() => setSelectedServer('official')}
               className={`chip ${selectedServer === 'official' ? 'chip-active' : ''}`}
               style={{ fontSize: '12px', padding: '6px 14px' }}
             >
-              <Sparkles size={12} style={{ display: 'inline', marginRight: '4px' }} /> Trailer chính thức
+              <Sparkles size={12} style={{ display: 'inline', marginRight: '4px' }} /> Trailer HD
             </button>
           )}
-          {videoSource && <button
-            onClick={() => setSelectedServer('stream')}
-            className={`chip ${selectedServer === 'stream' ? 'chip-active' : ''}`}
-            style={{ fontSize: '12px', padding: '6px 14px' }}
-          >
-            Nguồn video đã cấu hình
-          </button>}
-          {!movie.trailerUrl && !videoSource && (
+
+          {videoSource && !isGoogleDriveUrl(videoSource) && (
+            <button
+              onClick={() => setSelectedServer('stream')}
+              className={`chip ${selectedServer === 'stream' ? 'chip-active' : ''}`}
+              style={{ fontSize: '12px', padding: '6px 14px' }}
+            >
+              Nguồn dự phòng
+            </button>
+          )}
+
+          {!hasGdrive && !movie.trailerUrl && !videoSource && (
             <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Chưa có nguồn video cho phim này.</span>
           )}
         </div>
@@ -263,7 +297,15 @@ export function WatchPlayerClient({ movie, related }: WatchPlayerClientProps) {
                 boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
               }}
             >
-              {selectedServer === 'official' && movie.trailerUrl ? (
+              {selectedServer === 'gdrive' && gdriveSource ? (
+                <iframe
+                  src={gdriveSource}
+                  title={`${movie.title} - Google Drive`}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowFullScreen
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : selectedServer === 'official' && movie.trailerUrl ? (
                 <iframe
                   src={`${movie.trailerUrl}?autoplay=1&rel=0&enablejsapi=1`}
                   title={movie.title}
@@ -282,8 +324,9 @@ export function WatchPlayerClient({ movie, related }: WatchPlayerClientProps) {
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onError={() => {
-                      // Gracefully fallback to official YouTube embed if video fails to load
-                      if (movie.trailerUrl) {
+                      if (hasGdrive) {
+                        setSelectedServer('gdrive');
+                      } else if (movie.trailerUrl) {
                         setSelectedServer('official');
                       }
                     }}

@@ -105,6 +105,8 @@ export const movieStore = {
         trending: movieData.trending ?? false,
         inTheaters: movieData.inTheaters ?? false,
         seasons: movieData.seasons || [],
+        gdriveUrl: movieData.gdriveUrl || '',
+        episodeCurrent: movieData.episodeCurrent || '',
       };
       // Prepend to top so newly added movies show first
       movies.unshift(finalMovie);

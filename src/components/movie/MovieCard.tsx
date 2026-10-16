@@ -55,8 +55,8 @@ export function MovieCard({
         />
       </Link>
 
-      {/* Quality Badge */}
-      {movie.quality && movie.quality !== 'N/A' && (
+      {/* Quality / Episode Status Badge (Phimmoi style) */}
+      {(movie.episodeCurrent || (movie.quality && movie.quality !== 'N/A')) && (
         <span
           className="badge badge-quality"
           style={{
@@ -64,9 +64,16 @@ export function MovieCard({
             top: '8px',
             left: '8px',
             zIndex: 3,
+            fontSize: '11px',
+            padding: '3px 8px',
+            borderRadius: '4px',
+            maxWidth: '120px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
         >
-          {movie.quality}
+          {movie.episodeCurrent || movie.quality}
         </span>
       )}
 
