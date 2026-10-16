@@ -5,13 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
-  Film,
-  PlusCircle,
+  Upload,
   Globe,
   ChevronRight,
   Database,
 } from 'lucide-react';
-import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -20,7 +18,6 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { movies } = useMovieAdmin();
 
   const links = [
     {
@@ -30,23 +27,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       badge: null,
     },
     {
-      href: '/admin/movies',
-      label: 'Quản lý phim & series',
-      icon: Film,
-      badge: movies.length,
-    },
-    {
-      href: '/admin/movies/new',
-      label: 'Thêm phim mới',
-      icon: PlusCircle,
-      badge: '+ Mới',
-      isAccent: true,
-    },
-    {
       href: '/admin/database',
-      label: 'Nội dung Supabase',
-      icon: Database,
-      badge: null,
+      label: 'Đăng phim qua Google Drive',
+      icon: Upload,
+      badge: 'Drive',
+      isAccent: true,
     },
     {
       href: '/admin/settings',

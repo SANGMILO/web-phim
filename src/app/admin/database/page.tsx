@@ -14,7 +14,7 @@ export default async function SupabaseAdminPage({ searchParams }: Props) {
   if (!isSupabaseConfigured()) {
     return (
       <div style={{ padding: 32 }}>
-        <h1 className="font-display" style={{ fontSize: 28 }}>Nội dung Supabase</h1>
+        <h1 className="font-display" style={{ fontSize: 28 }}>Đăng phim qua Google Drive</h1>
         <p style={{ marginTop: 14, color: 'var(--text-secondary)' }}>
           Chưa cấu hình Supabase. Hãy tạo <code>.env.local</code> từ <code>.env.example</code> và áp dụng migration trước.
         </p>
@@ -48,14 +48,21 @@ export default async function SupabaseAdminPage({ searchParams }: Props) {
     <div style={{ padding: 32, width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h1 className="font-display" style={{ fontSize: 28 }}>Nội dung Supabase</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 6 }}>Mọi thao tác được xác minh admin phía server và kiểm tra lại bằng RLS.</p>
+          <h1 className="font-display" style={{ fontSize: 28 }}>Đăng phim qua Google Drive</h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: 6 }}>Metadata lưu trong Supabase; video được phát từ file Google Drive mà bạn sở hữu.</p>
         </div>
         {editing && <Link className="btn btn-secondary" href="/admin/database">Tạo phim mới</Link>}
       </div>
 
       {params.saved && <p style={{ color: '#4ade80', marginBottom: 18 }}>Đã lưu phim thành công.</p>}
       {params.episode_saved && <p style={{ color: '#4ade80', marginBottom: 18 }}>Đã lưu tập phim thành công.</p>}
+
+      <div style={{ padding: 16, border: '1px solid rgba(117, 221, 243, 0.25)', borderRadius: 'var(--radius-md)', background: 'rgba(117, 221, 243, 0.07)', marginBottom: 18 }}>
+        <strong style={{ color: 'var(--accent-cyan)' }}>Cách đăng phim:</strong>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 6 }}>
+          Tải video lên Google Drive, đặt quyền “Bất kỳ ai có đường liên kết – Người xem”, rồi dán link vào mục <strong>Nguồn phim Google Drive</strong> bên dưới. Website không tải file trực tiếp lên Vercel.
+        </p>
+      </div>
 
       <form action={saveMovie} style={{ display: 'grid', gap: 12, padding: 20, border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', background: 'var(--bg-secondary)', marginBottom: 28 }}>
         <input type="hidden" name="id" value={editing?.id ?? ''} />
