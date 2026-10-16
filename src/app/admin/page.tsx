@@ -342,7 +342,7 @@ export default function AdminDashboardPage() {
               <Download size={14} /> Sao lưu JSON
             </button>
             <Link
-              href="/admin/database"
+              href="/admin/movies/new"
               className="btn btn-primary"
               style={{
                 padding: '8px 18px',
@@ -384,7 +384,7 @@ export default function AdminDashboardPage() {
             >
               <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Phim mới thêm & cập nhật</h2>
               <Link
-                href="/admin/database"
+                href="/admin/movies"
                 style={{
                   fontSize: '13px',
                   color: 'var(--accent-crimson)',
@@ -475,7 +475,7 @@ export default function AdminDashboardPage() {
                     </button>
 
                     <Link
-                      href="/admin/database"
+                      href={`/admin/movies/${movie.id}/edit`}
                       title="Sửa phim"
                       style={{
                         padding: '6px',

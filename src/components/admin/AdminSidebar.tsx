@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
+  Film,
+  PlusCircle,
   Upload,
   Globe,
   ChevronRight,
   Database,
 } from 'lucide-react';
+import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -18,6 +21,7 @@ interface AdminSidebarProps {
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { movies } = useMovieAdmin();
 
   const links = [
     {
@@ -25,6 +29,19 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       label: 'Tổng quan Dashboard',
       icon: LayoutDashboard,
       badge: null,
+    },
+    {
+      href: '/admin/movies',
+      label: 'Quản lý phim & series',
+      icon: Film,
+      badge: movies.length,
+    },
+    {
+      href: '/admin/movies/new',
+      label: 'Thêm phim mới',
+      icon: PlusCircle,
+      badge: '+ Mới',
+      isAccent: true,
     },
     {
       href: '/admin/database',
@@ -136,6 +153,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
               const isActive =
                 link.href === '/admin'
                   ? pathname === '/admin'
+                  : link.href === '/admin/movies'
+                    ? pathname === '/admin/movies' || /^\/admin\/movies\/[^/]+\/edit$/.test(pathname)
                   : pathname.startsWith(link.href);
 
               return (

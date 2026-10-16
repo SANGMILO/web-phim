@@ -66,7 +66,7 @@ export function AdminHeader({ onToggleSidebar, title, subtitle }: AdminHeaderPro
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Quick Add Movie Button */}
         <Link
-          href="/admin/database"
+          href="/admin/movies/new"
           className="btn btn-primary"
           style={{
             padding: '8px 16px',
@@ -78,7 +78,7 @@ export function AdminHeader({ onToggleSidebar, title, subtitle }: AdminHeaderPro
           }}
         >
           <Plus size={16} />
-          <span>Thêm phim qua Drive</span>
+          <span>Thêm phim mới</span>
         </Link>
 
         {/* Live Website Link */}
