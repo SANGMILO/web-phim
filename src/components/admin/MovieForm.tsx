@@ -318,13 +318,18 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
             number: 1,
             title: 'Mùa 1',
             episodeCount: episodes.length,
-            episodes: episodes.map((ep, i) => ({
-              ...ep,
-              number: i + 1,
-              title: ep.title || `Tập ${i + 1}`,
-              gdriveUrl: toGoogleDriveEmbedUrl(ep.gdriveUrl) || '',
-              playbackUrl: toGoogleDriveEmbedUrl(ep.gdriveUrl) || ep.playbackUrl || '',
-            })),
+            episodes: episodes.map((ep, i) => {
+              const driveEmbed = toGoogleDriveEmbedUrl(ep.gdriveUrl);
+              const validDrive = driveEmbed || ep.gdriveUrl?.trim() || '';
+              return {
+                ...ep,
+                id: ep.id || `ep-${i + 1}`,
+                number: i + 1,
+                title: ep.title || `Tập ${i + 1}`,
+                gdriveUrl: validDrive,
+                playbackUrl: validDrive || ep.playbackUrl || '',
+              };
+            }),
           },
         ]
       : [];

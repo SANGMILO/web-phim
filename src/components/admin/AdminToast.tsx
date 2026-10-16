@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 interface Toast {
   id: string;
@@ -59,6 +59,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => {
           const isSuccess = toast.type === 'success';
           const isError = toast.type === 'error';
+          const isWarning = toast.type === 'warning';
 
           return (
             <div
@@ -76,6 +77,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                     ? 'rgba(46, 213, 115, 0.4)'
                     : isError
                     ? 'rgba(229, 57, 79, 0.5)'
+                    : isWarning
+                    ? 'rgba(245, 158, 11, 0.5)'
                     : 'rgba(130, 120, 255, 0.4)'
                 }`,
                 boxShadow: '0 12px 30px rgba(0,0,0,0.6)',
@@ -87,7 +90,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             >
               {isSuccess && <CheckCircle2 size={18} color="#2ed573" style={{ flexShrink: 0 }} />}
               {isError && <AlertCircle size={18} color="var(--accent-crimson)" style={{ flexShrink: 0 }} />}
-              {!isSuccess && !isError && <Info size={18} color="var(--accent-violet)" style={{ flexShrink: 0 }} />}
+              {isWarning && <AlertTriangle size={18} color="#F59E0B" style={{ flexShrink: 0 }} />}
+              {!isSuccess && !isError && !isWarning && <Info size={18} color="var(--accent-violet)" style={{ flexShrink: 0 }} />}
 
               <span style={{ flex: 1 }}>{toast.message}</span>
 

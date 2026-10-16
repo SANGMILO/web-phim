@@ -14,14 +14,20 @@ import {
   Edit,
   Download,
   Flame,
+  MessageSquare,
+  Users,
 } from 'lucide-react';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
+import { useReviews } from '@/lib/reviews/useReviews';
+import { useUsers } from '@/lib/users/useUsers';
 import { MovieImage } from '@/components/common/MovieImage';
 import { useToast } from '@/components/admin/AdminToast';
 
 export default function AdminDashboardPage() {
   const { movies, toggleFeatured, exportJson } = useMovieAdmin();
+  const { allReviews } = useReviews();
+  const { stats: userStats } = useUsers();
   const { showToast } = useToast();
 
   // Computed metrics
@@ -283,6 +289,120 @@ export default function AdminDashboardPage() {
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
               {totalFeatured} phim nằm trong mục Tiêu điểm
             </p>
+          </div>
+
+          {/* Card 5 - Reviews & Comments */}
+          <div
+            style={{
+              background: '#101116',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                ĐÁNH GIÁ & BÌNH LUẬN
+              </span>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  color: '#F59E0B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <MessageSquare size={18} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span className="font-display" style={{ fontSize: '32px', fontWeight: 800 }}>
+                {allReviews.length}
+              </span>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>ý kiến</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#2ed573' }}>
+                🟢 {allReviews.filter((r) => r.status === 'approved').length} công khai
+              </span>
+              <Link
+                href="/admin/reviews"
+                style={{ fontSize: '12px', color: 'var(--accent-crimson)', fontWeight: 600 }}
+              >
+                Kiểm duyệt &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 6 - Registered Users & Active */}
+          <div
+            style={{
+              background: '#101116',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '24px',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '16px',
+              }}
+            >
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                NGƯỜI DÙNG & THÀNH VIÊN
+              </span>
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(130, 120, 255, 0.12)',
+                  color: 'var(--accent-violet)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Users size={18} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span className="font-display" style={{ fontSize: '32px', fontWeight: 800 }}>
+                {userStats.totalUsers}
+              </span>
+              <span style={{ fontSize: '13px', color: '#2ed573' }}>
+                ({userStats.activeUsers} hoạt động)
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                👑 {userStats.vipUsers} VIP • +{userStats.newThisMonth} mới
+              </span>
+              <Link
+                href="/admin/users"
+                style={{ fontSize: '12px', color: 'var(--accent-crimson)', fontWeight: 600 }}
+              >
+                Quản lý &rarr;
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -574,6 +694,160 @@ export default function AdminDashboardPage() {
                 );
               })}
             </div>
+          </div>
+        </div>
+
+        {/* Recent Community Reviews Section */}
+        <div
+          style={{
+            marginTop: '32px',
+            background: '#101116',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                Bình luận & Đánh giá mới nhất từ khán giả
+              </h2>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                Theo dõi cảm nhận thực tế của cộng đồng người xem trên CineVerse
+              </p>
+            </div>
+            <Link
+              href="/admin/reviews"
+              style={{
+                fontSize: '13px',
+                color: 'var(--accent-crimson)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontWeight: 600,
+              }}
+            >
+              Quản lý tất cả ({allReviews.length}) <ArrowUpRight size={14} />
+            </Link>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {allReviews.slice(0, 4).map((rev) => (
+              <div
+                key={rev.id}
+                style={{
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--accent-crimson), var(--accent-violet))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '12px',
+                          color: '#fff',
+                        }}
+                      >
+                        {rev.userName[0]?.toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                        {rev.userName}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(245, 158, 11, 0.12)',
+                        color: '#F59E0B',
+                        fontWeight: 800,
+                        fontSize: '12px',
+                      }}
+                    >
+                      <Star size={12} fill="#F59E0B" />
+                      {rev.rating}/10
+                    </div>
+                  </div>
+
+                  <Link
+                    href={`/movie/${rev.movieId}`}
+                    target="_blank"
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: 'var(--accent-cyan)',
+                      textDecoration: 'none',
+                      display: 'block',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    🎬 {rev.movieTitle}
+                  </Link>
+
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.5,
+                      margin: 0,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {rev.content}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '12px',
+                    paddingTop: '10px',
+                    borderTop: '1px solid rgba(255,255,255,0.04)',
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  <span>{new Date(rev.createdAt).toLocaleDateString('vi-VN')}</span>
+                  {rev.status === 'approved' ? (
+                    <span style={{ color: '#2ed573', fontWeight: 600 }}>🟢 Hiển thị</span>
+                  ) : (
+                    <span style={{ color: '#ff4757', fontWeight: 600 }}>🔴 Đã ẩn</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

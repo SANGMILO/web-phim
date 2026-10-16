@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import {
   Play,
@@ -19,17 +19,61 @@ import { useWatchlist } from '@/components/providers/WatchlistProvider';
 import { TrailerModal } from '@/components/movie/TrailerModal';
 import { MovieRail } from '@/components/movie/MovieRail';
 import { MovieImage } from '@/components/common/MovieImage';
+import { MovieReviews } from '@/components/movie/MovieReviews';
+import { movieStore } from '@/lib/movies/movie-storage';
+import { isGoogleDriveUrl } from '@/lib/utils/google-drive';
 
 interface MovieDetailClientProps {
-  movie: Movie;
+  movie: Movie | null;
+  slugOrId?: string;
   related: Movie[];
 }
 
-export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
+export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: MovieDetailClientProps) {
   const { has, toggle } = useWatchlist();
   const [trailerOpen, setTrailerOpen] = useState(false);
   const [selectedSeasonIndex, setSelectedSeasonIndex] = useState(0);
-  const isInWatchlist = has(movie.id);
+
+  const targetId = slugOrId || initialMovie?.slug || initialMovie?.id || '';
+
+  const storeMovie = useSyncExternalStore(
+    movieStore.subscribe.bind(movieStore),
+    () => (targetId ? movieStore.getMovieById(targetId) : null),
+    () => null
+  );
+
+  const movie = storeMovie || initialMovie;
+
+  const isInWatchlist = movie ? has(movie.id) : false;
+
+  if (!movie) {
+    return (
+      <div
+        className="container-main"
+        style={{
+          paddingTop: '140px',
+          paddingBottom: '80px',
+          textAlign: 'center',
+          minHeight: '70vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Film size={54} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>
+          Đang cập nhật thông tin phim
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '480px', marginBottom: '24px' }}>
+          Nếu bạn vừa thêm tác phẩm mới, hãy đảm bảo đã bấm Lưu trong trang Quản trị.
+        </p>
+        <Link href="/" className="btn btn-primary">
+          Quay về trang chủ
+        </Link>
+      </div>
+    );
+  }
 
   const seasons = movie.seasons || [];
   const currentSeason = seasons[selectedSeasonIndex] || null;
@@ -39,7 +83,12 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
   const watchUrl = isSeries && episodes.length > 0
     ? `/watch/${movie.slug}?ep=${episodes[0].number}`
     : `/watch/${movie.slug}`;
-  const hasPlayback = Boolean(movie.playbackUrl || episodes.some((episode) => episode.playbackUrl));
+
+  const hasDrive = Boolean(
+    movie.gdriveUrl ||
+    (movie.playbackUrl && isGoogleDriveUrl(movie.playbackUrl)) ||
+    episodes.some((episode) => episode.gdriveUrl || (episode.playbackUrl && isGoogleDriveUrl(episode.playbackUrl)))
+  );
 
   return (
     <>
@@ -243,13 +292,35 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
             )}
 
             {/* CTAs */}
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {hasPlayback && <Link
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <Link
                 href={watchUrl}
                 className="btn btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 26px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  background: hasDrive
+                    ? 'linear-gradient(135deg, #2ed573 0%, #10ac84 100%)'
+                    : 'var(--accent-crimson)',
+                  boxShadow: hasDrive
+                    ? '0 4px 20px rgba(46, 213, 115, 0.4)'
+                    : '0 4px 20px rgba(229, 9, 20, 0.45)',
+                  color: hasDrive ? '#08090C' : '#fff',
+                  borderRadius: 'var(--radius-md)',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                }}
               >
-                <Play size={18} fill="white" /> {isSeries ? 'Xem phim ngay' : 'Xem phim'}
-              </Link>}
+                <Play size={18} fill={hasDrive ? '#08090C' : 'white'} />
+                {hasDrive
+                  ? 'Xem phim (Google Drive VIP)'
+                  : isSeries
+                  ? 'Xem phim ngay'
+                  : 'Xem phim'}
+              </Link>
               {movie.trailerUrl && (
                 <button className="btn btn-secondary" onClick={() => setTrailerOpen(true)}>
                   <Play size={18} /> Trailer
@@ -275,6 +346,27 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
                 )}
               </button>
             </div>
+
+            {hasDrive && (
+              <div
+                style={{
+                  marginTop: '16px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 14px',
+                  background: 'rgba(46, 213, 115, 0.1)',
+                  border: '1px solid rgba(46, 213, 115, 0.3)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  color: '#2ed573',
+                  fontWeight: 600,
+                }}
+              >
+                <Tv size={15} />
+                <span>Nguồn phát Google Drive VIP đã được kết nối và sẵn sàng xem.</span>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -312,59 +404,98 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
                 gap: '14px',
               }}
             >
-              {episodes.map((ep) => (
-                <Link
-                  key={ep.id}
-                  href={`/watch/${movie.slug}?ep=${ep.number}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    padding: '12px 16px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid var(--border-subtle)',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--accent-crimson)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div
+              {episodes.map((ep) => {
+                const epHasDrive = Boolean(
+                  ep.gdriveUrl ||
+                  (ep.playbackUrl && isGoogleDriveUrl(ep.playbackUrl))
+                );
+                return (
+                  <Link
+                    key={ep.id}
+                    href={`/watch/${movie.slug}?ep=${ep.number}`}
                     style={{
-                      width: '38px',
-                      height: '38px',
-                      borderRadius: '50%',
-                      background: 'rgba(229,57,79,0.12)',
-                      color: 'var(--accent-crimson)',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      fontWeight: 700,
-                      fontSize: '14px',
+                      gap: '14px',
+                      padding: '12px 16px',
+                      background: 'var(--bg-secondary)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-subtle)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent-crimson)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                      e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    {ep.number}
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {ep.title}
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background: 'rgba(229,57,79,0.12)',
+                        color: 'var(--accent-crimson)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        fontWeight: 700,
+                        fontSize: '14px',
+                      }}
+                    >
+                      {ep.number}
                     </div>
-                    {ep.runtime && (
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        {ep.runtime} phút
+                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {ep.title}
+                        </span>
+                        {epHasDrive ? (
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(46, 213, 115, 0.15)',
+                              color: '#2ed573',
+                              border: '1px solid rgba(46, 213, 115, 0.3)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            VIP 1080p
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              fontWeight: 500,
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              color: 'var(--text-muted)',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            Trailer
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <Play size={16} color="var(--accent-crimson)" style={{ flexShrink: 0 }} />
-                </Link>
-              ))}
+                      {ep.runtime && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          {ep.runtime} phút
+                        </div>
+                      )}
+                    </div>
+                    <Play size={16} color="var(--accent-crimson)" style={{ flexShrink: 0 }} />
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -419,6 +550,11 @@ export function MovieDetailClient({ movie, related }: MovieDetailClientProps) {
           </div>
         </section>
       )}
+
+      {/* Reviews & Ratings */}
+      <div className="container-main">
+        <MovieReviews movieId={movie.id} movieTitle={movie.title} />
+      </div>
 
       {/* Related Movies */}
       {related.length > 0 && (

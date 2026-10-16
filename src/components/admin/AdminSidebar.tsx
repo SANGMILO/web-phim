@@ -11,8 +11,12 @@ import {
   Globe,
   ChevronRight,
   Database,
+  MessageSquare,
+  Users,
 } from 'lucide-react';
 import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
+import { useReviews } from '@/lib/reviews/useReviews';
+import { useUsers } from '@/lib/users/useUsers';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -22,6 +26,8 @@ interface AdminSidebarProps {
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { movies } = useMovieAdmin();
+  const { allReviews } = useReviews();
+  const { users } = useUsers();
 
   const links = [
     {
@@ -35,6 +41,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       label: 'Quản lý phim & series',
       icon: Film,
       badge: movies.length,
+    },
+    {
+      href: '/admin/reviews',
+      label: 'Đánh giá & Bình luận',
+      icon: MessageSquare,
+      badge: allReviews.length,
+    },
+    {
+      href: '/admin/users',
+      label: 'Quản lý người dùng',
+      icon: Users,
+      badge: users.length,
     },
     {
       href: '/admin/movies/new',

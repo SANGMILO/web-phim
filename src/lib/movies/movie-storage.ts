@@ -105,7 +105,9 @@ export const movieStore = {
         trending: movieData.trending ?? false,
         inTheaters: movieData.inTheaters ?? false,
         seasons: movieData.seasons || [],
+        episodes: movieData.episodes || (movieData.seasons?.[0]?.episodes || []),
         gdriveUrl: movieData.gdriveUrl || '',
+        playbackUrl: movieData.playbackUrl || movieData.gdriveUrl || '',
         episodeCurrent: movieData.episodeCurrent || '',
       };
       // Prepend to top so newly added movies show first
