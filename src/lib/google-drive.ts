@@ -15,32 +15,44 @@ export function parseGoogleDriveUrl(value: string): string | null {
     input = iframeSrcMatch[1].trim();
   }
 
-  // 2. Direct regex match on /file/d/{ID} or /file/u/{n}/d/{ID} or /d/{ID}
-  const fileMatch = input.match(/\/(?:file(?:\/u\/\d+)?\/d|d)\/([A-Za-z0-9_-]{15,})/);
-  if (fileMatch?.[1]) {
-    return fileMatch[1];
-  }
-
-  // 3. Match query parameter id={ID}
-  const queryMatch = input.match(/[?&]id=([A-Za-z0-9_-]{15,})/);
-  if (queryMatch?.[1]) {
-    return queryMatch[1];
-  }
-
-  // 4. If input is already directly a raw File ID
+  // 2. If input is directly a raw File ID (no slashes, no protocol, no dots)
   if (/^[A-Za-z0-9_-]{15,45}$/.test(input) && !input.includes('/') && !input.includes('.')) {
     return input;
   }
 
-  // 5. URL parser fallback
+  // 3. For URLs, ensure https and drive.google.com or docs.google.com
   try {
     const normalized = input.startsWith('http://') || input.startsWith('https://')
       ? input
       : `https://${input}`;
     const url = new URL(normalized);
-    if (url.hostname.includes('drive.google.com') || url.hostname.includes('docs.google.com')) {
-      const pathMatch = url.pathname.match(/\/([A-Za-z0-9_-]{15,})/);
-      if (pathMatch?.[1]) return pathMatch[1];
+
+    // Enforce https
+    if (url.protocol !== 'https:') {
+      return null;
+    }
+
+    // Enforce Google Drive domain
+    const host = url.hostname.toLowerCase();
+    if (!host.endsWith('drive.google.com') && !host.endsWith('docs.google.com')) {
+      return null;
+    }
+
+    // Reject folder links
+    if (url.pathname.includes('/folders/')) {
+      return null;
+    }
+
+    // Match /file/d/{ID}, /file/u/{n}/d/{ID}, or /d/{ID}
+    const pathFileMatch = url.pathname.match(/\/(?:file(?:\/u\/\d+)?\/d|d)\/([A-Za-z0-9_-]{15,})/);
+    if (pathFileMatch?.[1]) {
+      return pathFileMatch[1];
+    }
+
+    // Match query parameter id={ID} (e.g. /open?id=... or /uc?id=...)
+    const queryId = url.searchParams.get('id');
+    if (queryId && isGoogleDriveFileId(queryId)) {
+      return queryId;
     }
   } catch {
     // Ignore URL parse errors

@@ -46,7 +46,7 @@ describe('PlaybackPlayer', () => {
         }}
       />,
     );
-    expect(html).toContain('Mã tệp Google Drive không hợp lệ');
+    expect(html).toContain('Nguồn phát video chưa sẵn sàng');
     expect(html).not.toContain('<iframe');
   });
 });

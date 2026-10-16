@@ -334,7 +334,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
               }}
             >
               <Tv size={13} style={{ display: 'inline', marginRight: '5px' }} />
-              Server VIP 1 (Google Drive 1080p)
+              Server VIP (Full HD)
             </button>
           ) : (
             <span
@@ -387,59 +387,6 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
           )}
         </div>
 
-        {/* Google Drive Status & Processing Notice */}
-        {hasGdrive && (
-          <div
-            style={{
-              marginBottom: '18px',
-              padding: '12px 18px',
-              background: 'rgba(46, 213, 115, 0.08)',
-              border: '1px solid rgba(46, 213, 115, 0.25)',
-              borderRadius: 'var(--radius-md)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '12px',
-              fontSize: '13px',
-              color: '#2ed573',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Tv size={16} />
-              <span>
-                <strong>Nguồn phát Google Drive VIP 1080p:</strong>
-                <span style={{ color: 'rgba(255,255,255,0.7)', marginLeft: '6px' }}>
-                  {isSeries && currentEpisode ? `${currentEpisode.title} đã được kết nối link Drive. ` : ''}
-                  Nếu file vừa tải lên và hiển thị &quot;Đang xử lý video...&quot;, Google Drive cần vài phút để phân giải xong. Bạn có thể mở link gốc hoặc xem Trailer HD trong lúc chờ.
-                </span>
-              </span>
-            </div>
-            {rawGdrive && (
-              <a
-                href={rawGdrive.includes('http') ? rawGdrive : `https://drive.google.com/file/d/${rawGdrive}/view`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: '#fff',
-                  background: 'rgba(255,255,255,0.12)',
-                  padding: '6px 14px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  border: '1px solid rgba(255,255,255,0.2)',
-                }}
-              >
-                Mở link Drive gốc
-              </a>
-            )}
-          </div>
-        )}
-
         {/* Unlinked Episode / Movie Notice: Auto fallback to Trailer */}
         {!hasGdrive && movie.trailerUrl && (
           <div
@@ -460,11 +407,11 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
             <span>
               <strong>
                 {isSeries && currentEpisode
-                  ? `${currentEpisode.title} đang chờ cập nhật link phim:`
-                  : 'Phim đang chờ cập nhật link chính thức:'}
+                  ? `${currentEpisode.title} đang chờ cập nhật bản phim:`
+                  : 'Phim đang chờ cập nhật bản phát sóng:'}
               </strong>
               <span style={{ color: 'rgba(255,255,255,0.8)', marginLeft: '6px' }}>
-                Admin chưa gắn link Google Drive cho {isSeries ? 'tập này' : 'phim này'}. Hệ thống đang tự động phát <strong>Trailer HD</strong> để bạn xem trước nội dung. Khi admin cập nhật link Drive, phim sẽ tự động phát bản VIP 1080p.
+                Hệ thống đang tự động phát <strong>Trailer HD</strong> giới thiệu để bạn xem trước nội dung. Khi có bản Full HD, phim sẽ tự động phát bản đẹp nhất.
               </span>
             </span>
           </div>
@@ -497,7 +444,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
               {selectedServer === 'gdrive' && gdriveSource ? (
                 <iframe
                   src={gdriveSource}
-                  title={`${movie.title} - Google Drive`}
+                  title={`${movie.title} - Full HD`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   allowFullScreen
                   style={{ width: '100%', height: '100%', border: 'none' }}
@@ -805,7 +752,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
                                 flexShrink: 0,
                               }}
                             >
-                              VIP 1080p
+                              Full HD
                             </span>
                           ) : (
                             <span

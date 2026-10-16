@@ -171,7 +171,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
               )}
               {(movie.gdriveUrl || (movie.playbackUrl && movie.playbackUrl.includes('drive.google.com'))) && (
                 <span className="badge" style={{ background: 'rgba(46,213,115,0.15)', color: '#2ed573', border: '1px solid rgba(46,213,115,0.3)' }}>
-                  Google Drive VIP
+                  Bản Full HD
                 </span>
               )}
               {movie.rating && (
@@ -316,7 +316,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
               >
                 <Play size={18} fill={hasDrive ? '#08090C' : 'white'} />
                 {hasDrive
-                  ? 'Xem phim (Google Drive VIP)'
+                  ? 'Xem bản Full HD'
                   : isSeries
                   ? 'Xem phim ngay'
                   : 'Xem phim'}
@@ -364,7 +364,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
                 }}
               >
                 <Tv size={15} />
-                <span>Nguồn phát Google Drive VIP đã được kết nối và sẵn sàng xem.</span>
+                <span>Đã có bản Full HD sắc nét, sẵn sàng phát.</span>
               </div>
             )}
           </div>
@@ -467,7 +467,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
                               flexShrink: 0,
                             }}
                           >
-                            VIP 1080p
+                            Full HD
                           </span>
                         ) : (
                           <span

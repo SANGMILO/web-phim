@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!movie) return { title: 'Xem phim | CineVerse' };
   return {
     title: `Xem phim ${movie.title} | CineVerse`,
-    description: `Xem phim ${movie.title} chất lượng cao, Google Drive VIP và Vietsub.`,
+    description: `Xem phim ${movie.title} chất lượng cao Full HD và Vietsub.`,
   };
 }
 
