@@ -312,6 +312,8 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
 
     // Build structured seasons if series/anime
     const isSeriesType = contentType === 'series' || contentType === 'anime';
+    const primaryGdrive = convertedGdrive || toGoogleDriveEmbedUrl(episodes[0]?.gdriveUrl) || '';
+
     const structuredSeasons: Season[] = isSeriesType
       ? [
           {
@@ -321,13 +323,16 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
             episodes: episodes.map((ep, i) => {
               const driveEmbed = toGoogleDriveEmbedUrl(ep.gdriveUrl);
               const validDrive = driveEmbed || ep.gdriveUrl?.trim() || '';
+              const finalEpisodeDrive = (i === 0 && !validDrive && convertedGdrive)
+                ? convertedGdrive
+                : validDrive;
               return {
                 ...ep,
                 id: ep.id || `ep-${i + 1}`,
                 number: i + 1,
                 title: ep.title || `Tập ${i + 1}`,
-                gdriveUrl: validDrive,
-                playbackUrl: validDrive || ep.playbackUrl || '',
+                gdriveUrl: finalEpisodeDrive,
+                playbackUrl: finalEpisodeDrive || ep.playbackUrl || '',
               };
             }),
           },
@@ -355,8 +360,8 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
       contentType,
       trailerUrl: trailerUrl.trim() || 'https://www.youtube.com/embed/Way9Dexny3w',
       // If user supplied Google Drive, store in gdriveUrl and playbackUrl
-      gdriveUrl: convertedGdrive || '',
-      playbackUrl: convertedGdrive || '',
+      gdriveUrl: primaryGdrive,
+      playbackUrl: primaryGdrive,
       episodeCurrent: episodeCurrent.trim() || 'Full HD Vietsub',
       cast: cast.filter((c) => c.name.trim() !== ''),
       director: director.trim(),

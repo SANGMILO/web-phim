@@ -6,6 +6,8 @@ const fileId = '1AbCdEfGhIjKlMnOpQrStUvWxYz';
 describe('parseGoogleDriveUrl', () => {
   it.each([
     [`https://drive.google.com/file/d/${fileId}/view?usp=sharing`, fileId],
+    [`https://drive.google.com/file/d/${fileId}/view?usp=drive_link`, fileId],
+    [`https://drive.google.com/file/d/${fileId}/preview`, fileId],
     [`https://drive.google.com/open?id=${fileId}`, fileId],
     [`https://drive.google.com/uc?id=${fileId}&export=download`, fileId],
   ])('trích xuất File ID từ %s', (url, expected) => {

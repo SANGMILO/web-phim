@@ -54,7 +54,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
   const isSeries = Boolean(
     movie?.contentType === 'series' ||
     movie?.contentType === 'anime' ||
-    (movie?.seasons && movie.seasons.length > 0)
+    (!movie?.contentType && movie?.seasons && movie.seasons.length > 0)
   );
   
   // Resolve episodes list
@@ -66,12 +66,12 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     return movie.episodes || [];
   }, [movie]);
 
-  const currentEpNumber = epParam ? parseInt(epParam, 10) : 1;
+  const currentEpNumber = epParam ? (parseInt(epParam, 10) || 1) : 1;
   const currentEpisode = allEpisodes.find((e) => e.number === currentEpNumber) || allEpisodes[0] || null;
 
   // Resolve Google Drive stream URL:
-  // - For series with multiple episodes, check currentEpisode strictly so unlinked episodes do not borrow link from other episodes
-  // - For single movies or 1-episode titles, fallback to movie-level drive link if provided
+  // - If this specific episode has a Drive link, use it.
+  // - For single movies or Episode 1, fallback to movie-level drive link if provided
   const episodeDrive =
     currentEpisode?.gdriveUrl ||
     (isGoogleDriveUrl(currentEpisode?.playbackUrl) ? currentEpisode?.playbackUrl : null);
@@ -81,9 +81,11 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     (movie?.playbackSources?.find((s) => s.provider === 'google_drive')?.externalFileId) ||
     (isGoogleDriveUrl(movie?.playbackUrl) ? movie?.playbackUrl : null);
 
-  const rawGdrive = isSeries && allEpisodes.length > 1
-    ? episodeDrive
-    : (episodeDrive || movieDrive);
+  const isEp1 = !epParam || currentEpNumber === 1 || allEpisodes.length <= 1;
+
+  const rawGdrive =
+    episodeDrive ||
+    (!isSeries || isEp1 ? movieDrive : null);
 
   const gdriveSource = toGoogleDriveEmbedUrl(rawGdrive);
   const hasGdrive = Boolean(gdriveSource);
@@ -461,11 +463,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
                     onTimeUpdate={handleTimeUpdate}
                     onLoadedMetadata={handleLoadedMetadata}
                     onError={() => {
-                      if (hasGdrive) {
-                        setSelectedServer('gdrive');
-                      } else if (movie.trailerUrl) {
-                        setSelectedServer('official');
-                      }
+                      // Handled gracefully without overriding manual server selection
                     }}
                     onClick={togglePlay}
                     style={{ width: '100%', height: '100%', objectFit: 'contain' }}
@@ -689,9 +687,11 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
               >
                 {allEpisodes.map((ep) => {
                   const isActive = ep.number === currentEpNumber;
+                  const isEp1 = ep.number === 1;
                   const epHasDrive = Boolean(
                     ep.gdriveUrl ||
-                    (ep.playbackUrl && isGoogleDriveUrl(ep.playbackUrl))
+                    (ep.playbackUrl && isGoogleDriveUrl(ep.playbackUrl)) ||
+                    (isEp1 && movieDrive)
                   );
                   return (
                     <Link

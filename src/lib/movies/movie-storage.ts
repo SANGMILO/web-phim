@@ -29,7 +29,7 @@ function loadFromStorage(): Movie[] {
         if (
           m.gdriveUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
           m.playbackUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
-          (m.slug === 'kingdom-of-the-planet-of-the-apes' && !m.gdriveUrl)
+          ((m.slug === 'kingdom-of-the-planet-of-the-apes' || m.slug === 'hanh-tinh-khi-vuong-quoc-moi') && !m.gdriveUrl)
         ) {
           updated = true;
           return {
@@ -82,15 +82,22 @@ export const movieStore = {
   },
 
   getMovieById(idOrSlug: string): Movie | null {
+    if (!idOrSlug) return null;
+    const clean = decodeURIComponent(idOrSlug).trim().toLowerCase();
     const movies = this.getMovies();
     return (
-      movies.find(
-        (m) =>
-          m.id === idOrSlug ||
-          m.slug === idOrSlug ||
-          (idOrSlug === 'hanh-tinh-khi-vuong-quoc-moi' && m.slug === 'kingdom-of-the-planet-of-the-apes') ||
-          (idOrSlug === 'kingdom-of-the-planet-of-the-apes' && m.slug === 'hanh-tinh-khi-vuong-quoc-moi')
-      ) ?? null
+      movies.find((m) => {
+        const mId = m.id?.toLowerCase();
+        const mSlug = m.slug?.toLowerCase();
+        return (
+          mId === clean ||
+          mSlug === clean ||
+          (clean === 'hanh-tinh-khi-vuong-quoc-moi' && mSlug === 'kingdom-of-the-planet-of-the-apes') ||
+          (clean === 'kingdom-of-the-planet-of-the-apes' && mSlug === 'hanh-tinh-khi-vuong-quoc-moi') ||
+          (clean === 'dune-1' && mSlug === 'hanh-tinh-cat-dune-1') ||
+          (clean === 'hanh-tinh-cat-dune-1' && mSlug === 'dune-1')
+        );
+      }) ?? null
     );
   },
 

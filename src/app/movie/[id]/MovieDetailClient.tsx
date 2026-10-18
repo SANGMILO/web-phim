@@ -79,7 +79,9 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
   const currentSeason = seasons[selectedSeasonIndex] || null;
   const episodes = currentSeason ? currentSeason.episodes : (movie.episodes || []);
 
-  const isSeries = movie.contentType === 'series' || movie.contentType === 'anime' || seasons.length > 0;
+  const isSeries = movie.contentType === 'series' ||
+    movie.contentType === 'anime' ||
+    (!movie.contentType && seasons.length > 0);
   const watchUrl = isSeries && episodes.length > 0
     ? `/watch/${movie.slug}?ep=${episodes[0].number}`
     : `/watch/${movie.slug}`;
