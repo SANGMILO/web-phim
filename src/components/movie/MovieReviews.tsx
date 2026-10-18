@@ -128,7 +128,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
       style={{
         marginTop: '48px',
         marginBottom: '64px',
-        padding: '32px 24px',
+        padding: 'clamp(18px, 3vw, 32px) clamp(14px, 3vw, 24px)',
         background: 'var(--bg-secondary, #101116)',
         borderRadius: '16px',
         border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))',
@@ -229,7 +229,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))',
           gap: '24px',
           background: 'rgba(255, 255, 255, 0.03)',
           borderRadius: '12px',
@@ -320,7 +320,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
         style={{
           background: 'rgba(23, 25, 32, 0.95)',
           borderRadius: '14px',
-          padding: '24px',
+          padding: 'clamp(16px, 3vw, 24px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           marginBottom: '32px',
         }}
@@ -394,7 +394,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
             })}
             <div
               style={{
-                marginLeft: '12px',
+                margin: '4px 0',
                 padding: '4px 10px',
                 borderRadius: '6px',
                 background: 'rgba(245, 158, 11, 0.1)',
@@ -402,6 +402,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
                 color: '#F59E0B',
                 fontSize: '13px',
                 fontWeight: 700,
+                maxWidth: '100%',
               }}
             >
               {currentScore}/10 - {RATING_LABELS[currentScore]}

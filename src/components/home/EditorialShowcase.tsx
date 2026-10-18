@@ -214,7 +214,7 @@ export function EditorialShowcase({ movies }: EditorialShowcaseProps) {
             <div
               key={`${movie.id}-${index}`}
               style={{
-                width: 'clamp(320px, 50vw, 580px)',
+                width: 'clamp(280px, 85vw, 580px)',
                 flexShrink: 0,
                 position: 'relative',
                 borderRadius: 'var(--radius-xl)',

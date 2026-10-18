@@ -287,21 +287,20 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     <div style={{ paddingTop: '80px', minHeight: '100vh', background: 'var(--bg-main)' }}>
       <div className="container-main" style={{ paddingBottom: '60px' }}>
         {/* Navigation Breadcrumb */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '16px 0 16px', fontSize: '14px', color: 'var(--text-muted)' }}>
-          <Link href={`/movie/${movie.slug}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-            <ArrowLeft size={16} /> Quay lại thông tin phim
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '14px 0 16px', fontSize: '13px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+          <Link href={`/movie/${movie.slug}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+            <ArrowLeft size={16} /> Thông tin phim
           </Link>
           <span>/</span>
-          <span style={{ color: 'var(--text-primary)' }}>{movie.title}</span>
+          <span style={{ color: 'var(--text-primary)', maxWidth: 'min(280px, 50vw)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{movie.title}</span>
           {isSeries && currentEpisode && (
             <>
               <span>/</span>
-              <span style={{ color: 'var(--accent-crimson)' }}>Tập {currentEpisode.number}</span>
+              <span style={{ color: 'var(--accent-crimson)', whiteSpace: 'nowrap' }}>Tập {currentEpisode.number}</span>
             </>
           )}
         </div>
 
-        {/* Server Selector Bar */}
         {/* Server Selector Bar */}
         <div
           style={{
@@ -419,13 +418,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
 
         {/* Video Player & Episodes Container */}
         <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: isSeries && allEpisodes.length > 0 ? 'minmax(0, 1fr) 340px' : '1fr',
-            gap: '24px',
-            alignItems: 'start',
-          }}
-          className="watch-layout"
+          className={`watch-layout ${isSeries && allEpisodes.length > 0 ? 'watch-layout-series' : ''}`}
         >
           {/* Main Video Viewport */}
           <div>
@@ -667,12 +660,12 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
           {/* Episode Sidebar for series */}
           {isSeries && allEpisodes.length > 0 && (
             <div
+              className="watch-sidebar"
               style={{
                 background: 'var(--bg-secondary)',
                 borderRadius: 'var(--radius-lg)',
                 border: '1px solid var(--border-subtle)',
                 padding: '16px',
-                maxHeight: '640px',
                 display: 'flex',
                 flexDirection: 'column',
               }}

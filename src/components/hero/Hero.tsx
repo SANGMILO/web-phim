@@ -287,7 +287,7 @@ export function Hero({ movies }: HeroProps) {
                 <button
                   className="btn btn-primary"
                   onClick={() => setTrailerOpen(true)}
-                  style={{ fontSize: '15px', padding: '14px 32px' }}
+                  style={{ fontSize: '15px', padding: 'clamp(10px, 2vw, 14px) clamp(18px, 3vw, 32px)' }}
                 >
                   <Play size={18} fill="white" /> Xem trailer
                 </button>
@@ -295,7 +295,7 @@ export function Hero({ movies }: HeroProps) {
               <Link
                 href={detailHref}
                 className="btn btn-secondary"
-                style={{ fontSize: '15px', padding: '14px 32px' }}
+                style={{ fontSize: '15px', padding: 'clamp(10px, 2vw, 14px) clamp(18px, 3vw, 32px)' }}
               >
                 <Info size={18} /> Chi tiết phim
               </Link>

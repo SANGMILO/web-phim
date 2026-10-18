@@ -389,7 +389,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
   const detectedGdriveEmbed = toGoogleDriveEmbedUrl(gdriveUrl);
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: '28px', maxWidth: '1400px', width: '100%' }}>
+    <form onSubmit={handleSubmit} style={{ padding: 'clamp(14px, 3vw, 28px)', maxWidth: '1400px', width: '100%' }}>
       {/* ─── Top Action Header ───────────────────────────────────────── */}
       <div
         style={{
@@ -547,7 +547,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
           gap: '24px',
           alignItems: 'start',
         }}
@@ -739,7 +739,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               </div>
 
               {/* Tên gốc & Slug */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
                     Tên gốc (English)
@@ -856,7 +856,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               </div>
 
               {/* Đạo diễn & Quốc gia */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
                     Đạo diễn
@@ -903,7 +903,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               </div>
 
               {/* Năm, Thời lượng & Ngày phát hành */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
                     Năm phát hành
@@ -1040,6 +1040,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
+                      flexWrap: 'wrap',
                       padding: '8px',
                       borderRadius: 'var(--radius-sm)',
                       background: 'rgba(255,255,255,0.02)',
@@ -1148,6 +1149,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '10px',
+                    flexWrap: 'wrap',
                   }}
                 >
                   <input
@@ -1156,7 +1158,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
                     value={member.name}
                     onChange={(e) => handleUpdateCast(index, 'name', e.target.value)}
                     style={{
-                      flex: 1,
+                      flex: '1 1 180px',
                       padding: '8px 12px',
                       borderRadius: 'var(--radius-sm)',
                       background: 'rgba(255, 255, 255, 0.05)',
@@ -1172,7 +1174,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
                     value={member.role}
                     onChange={(e) => handleUpdateCast(index, 'role', e.target.value)}
                     style={{
-                      flex: 1,
+                      flex: '1 1 180px',
                       padding: '8px 12px',
                       borderRadius: 'var(--radius-sm)',
                       background: 'rgba(255, 255, 255, 0.05)',
@@ -1303,7 +1305,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               </div>
 
               {/* Chất lượng & Ngôn ngữ */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
                     Chất lượng video
@@ -1356,7 +1358,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               </div>
 
               {/* Trạng thái & Đánh giá */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
                     Trạng thái phát hành
@@ -1546,7 +1548,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
                   Xem trước hình ảnh:
                 </span>
 
-                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   {/* Poster Thumbnail */}
                   <div
                     style={{

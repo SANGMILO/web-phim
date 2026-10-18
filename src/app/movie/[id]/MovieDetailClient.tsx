@@ -158,7 +158,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
           </div>
 
           {/* Info */}
-          <div style={{ flex: 1, minWidth: '280px' }}>
+          <div style={{ flex: 1, minWidth: 'min(100%, 280px)' }}>
             {/* Badges */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
               {movie.quality && movie.quality !== 'N/A' && (
@@ -400,7 +400,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))',
                 gap: '14px',
               }}
             >
