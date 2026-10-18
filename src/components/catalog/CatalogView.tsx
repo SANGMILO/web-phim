@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useSyncExternalStore } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { Movie, ContentType, MovieFilter } from '@/types/movie';
 import { MovieCard } from '@/components/movie/MovieCard';
 import { GENRES } from '@/data/demo-movies';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { movieStore } from '@/lib/movies/movie-storage';
 
 interface CatalogViewProps {
   title: string;
@@ -34,6 +35,27 @@ export function CatalogView({
   const searchParams = useSearchParams();
   const initialGenre = searchParams.get('genre') || '';
 
+  const storeMovies = useSyncExternalStore(
+    movieStore.subscribe.bind(movieStore),
+    () => movieStore.getMovies(),
+    () => null
+  );
+
+  const effectiveMovies = useMemo(() => {
+    if (!storeMovies || storeMovies.length === 0) return movies;
+    if (contentType) {
+      return storeMovies.filter((m) => m.contentType === contentType);
+    }
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('rạp') || lowerTitle.includes('theater')) {
+      return storeMovies.filter((m) => m.inTheaters);
+    }
+    if (lowerTitle.includes('sắp') || lowerTitle.includes('upcoming')) {
+      return storeMovies.filter((m) => m.status === 'upcoming');
+    }
+    return storeMovies;
+  }, [storeMovies, movies, contentType, title]);
+
   const [query, setQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState(initialGenre);
   const [selectedYear, setSelectedYear] = useState('');
@@ -42,12 +64,12 @@ export function CatalogView({
   const [page, setPage] = useState(1);
 
   const years = useMemo(() => {
-    const yearSet = new Set(movies.map((m) => m.year));
+    const yearSet = new Set(effectiveMovies.map((m) => m.year));
     return Array.from(yearSet).sort((a, b) => b - a);
-  }, [movies]);
+  }, [effectiveMovies]);
 
   const filtered = useMemo(() => {
-    let result = [...movies];
+    let result = [...effectiveMovies];
 
     if (query) {
       const q = query.toLowerCase();

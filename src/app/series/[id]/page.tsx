@@ -26,9 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function SeriesDetailPage({ params }: Props) {
   const { id } = await params;
   const movie = await movieService.getById(id);
-  if (!movie) notFound();
+  const related = movie ? await movieService.getRelated(id) : [];
 
-  const related = await movieService.getRelated(id);
-
-  return <MovieDetailClient movie={movie} related={related} />;
+  return <MovieDetailClient movie={movie} slugOrId={id} related={related} />;
 }

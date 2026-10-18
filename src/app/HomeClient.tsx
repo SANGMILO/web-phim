@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useSyncExternalStore } from 'react';
 import type { Movie } from '@/types/movie';
 import { Hero } from '@/components/hero/Hero';
 import { MovieRail } from '@/components/movie/MovieRail';
 import { GenreGrid } from '@/components/movie/GenreGrid';
 import { ContinueWatching } from '@/components/home/ContinueWatching';
 import { EditorialShowcase } from '@/components/home/EditorialShowcase';
+import { movieStore } from '@/lib/movies/movie-storage';
 
 interface HomeClientProps {
   featured: Movie[];
@@ -27,12 +28,55 @@ export function HomeClient({
   theaters,
   upcoming,
 }: HomeClientProps) {
-  const allMovies = [...featured, ...trending, ...movies, ...series, ...anime, ...theaters, ...upcoming];
+  const storeMovies = useSyncExternalStore(
+    movieStore.subscribe.bind(movieStore),
+    () => movieStore.getMovies(),
+    () => null
+  );
 
-  // Recent movies sorted by year
-  const recentMovies = [...movies].sort((a, b) => b.year - a.year).slice(0, 15);
+  const effectiveMoviesList = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.contentType === 'movie')
+    : movies;
+
+  const effectiveSeries = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.contentType === 'series')
+    : series;
+
+  const effectiveAnime = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.contentType === 'anime')
+    : anime;
+
+  const effectiveTheaters = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.inTheaters)
+    : theaters;
+
+  const effectiveUpcoming = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.status === 'upcoming')
+    : upcoming;
+
+  const dynamicFeatured = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.featured)
+    : featured;
+  const effectiveFeatured = dynamicFeatured.length > 0
+    ? dynamicFeatured
+    : (storeMovies && storeMovies.length > 0 ? [storeMovies[0]] : featured);
+
+  const dynamicTrending = storeMovies && storeMovies.length > 0
+    ? storeMovies.filter((m) => m.trending)
+    : trending;
+  const effectiveTrending = dynamicTrending.length > 0
+    ? dynamicTrending
+    : trending;
+
+  const allMovies = storeMovies && storeMovies.length > 0
+    ? storeMovies
+    : [...featured, ...trending, ...movies, ...series, ...anime, ...theaters, ...upcoming];
+
+  // Recent movies sorted with newly published/saved items on top
+  const recentMovies = [...effectiveMoviesList].slice(0, 15);
+
   // Curated recommendations: mix of high-rated across types
-  const curated = [...movies, ...series, ...anime]
+  const curated = [...effectiveMoviesList, ...effectiveSeries, ...effectiveAnime]
     .filter((m) => m.rating && m.rating >= 7.5)
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     .slice(0, 12);

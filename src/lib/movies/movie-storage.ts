@@ -40,6 +40,17 @@ function loadFromStorage(): Movie[] {
         }
         return m;
       });
+
+      // Merge any newly added official demo movies into user storage without overwriting custom edits
+      const existingSlugs = new Set(verified.map((m: Movie) => m.slug || m.id));
+      const missingDemo = demoMovies.filter(
+        (dm) => !existingSlugs.has(dm.slug) && !existingSlugs.has(dm.id)
+      );
+      if (missingDemo.length > 0) {
+        verified.push(...missingDemo);
+        updated = true;
+      }
+
       if (updated) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(verified));
       }

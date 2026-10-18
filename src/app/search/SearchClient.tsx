@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, X, Film, Tv, Sparkles, Filter } from 'lucide-react';
 import type { Movie, ContentType } from '@/types/movie';
 import { MovieCard } from '@/components/movie/MovieCard';
 import { GENRES } from '@/data/demo-movies';
+import { movieStore } from '@/lib/movies/movie-storage';
 
 interface SearchClientProps {
   allMovies: Movie[];
@@ -16,6 +17,14 @@ export function SearchClient({ allMovies }: SearchClientProps) {
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get('q') || '';
   const urlGenre = searchParams.get('genre') || '';
+
+  const storeMovies = useSyncExternalStore(
+    movieStore.subscribe.bind(movieStore),
+    () => movieStore.getMovies(),
+    () => null
+  );
+
+  const effectiveAllMovies = storeMovies && storeMovies.length > 0 ? storeMovies : allMovies;
 
   const [searchQuery, setSearchQuery] = useState(urlQuery);
   const [selectedType, setSelectedType] = useState<ContentType | 'all'>('all');
@@ -51,7 +60,7 @@ export function SearchClient({ allMovies }: SearchClientProps) {
 
   // Filtered results
   const results = useMemo(() => {
-    let list = [...allMovies];
+    let list = [...effectiveAllMovies];
     const q = searchQuery.trim().toLowerCase();
 
     if (q) {
@@ -81,7 +90,7 @@ export function SearchClient({ allMovies }: SearchClientProps) {
     }
 
     return list;
-  }, [allMovies, searchQuery, selectedType, selectedGenre, sortBy]);
+  }, [effectiveAllMovies, searchQuery, selectedType, selectedGenre, sortBy]);
 
   const handleClear = useCallback(() => {
     setSearchQuery('');
@@ -275,9 +284,9 @@ export function SearchClient({ allMovies }: SearchClientProps) {
 
         {/* Results Grid */}
         {results.length > 0 ? (
-          <div className="movie-grid">
+          <div className="poster-grid">
             {results.map((m) => (
-              <MovieCard key={m.id} movie={m} showGenre />
+              <MovieCard key={m.id} movie={m} showGenre width={undefined as unknown as number} />
             ))}
           </div>
         ) : (

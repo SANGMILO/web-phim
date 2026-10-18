@@ -515,21 +515,24 @@ img {
 }
 
 /* ───── Responsive Grid ───── */
-.poster-grid {
+.poster-grid,
+.movie-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 20px;
 }
 
 @media (min-width: 768px) {
-  .poster-grid {
+  .poster-grid,
+  .movie-grid {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 24px;
   }
 }
 
 @media (min-width: 1200px) {
-  .poster-grid {
+  .poster-grid,
+  .movie-grid {
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
