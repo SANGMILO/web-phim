@@ -23,8 +23,28 @@ function loadFromStorage(): Movie[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      cachedMovies = parsed;
-      return parsed;
+      // Heal any obsolete dummy Google Drive links in existing browser storage
+      let updated = false;
+      const verified = parsed.map((m: Movie) => {
+        if (
+          m.gdriveUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
+          m.playbackUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
+          (m.slug === 'kingdom-of-the-planet-of-the-apes' && !m.gdriveUrl)
+        ) {
+          updated = true;
+          return {
+            ...m,
+            gdriveUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
+            playbackUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
+          };
+        }
+        return m;
+      });
+      if (updated) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(verified));
+      }
+      cachedMovies = verified;
+      return verified;
     }
   } catch (err) {
     console.error('Error loading movies from localStorage:', err);
@@ -52,7 +72,15 @@ export const movieStore = {
 
   getMovieById(idOrSlug: string): Movie | null {
     const movies = this.getMovies();
-    return movies.find((m) => m.id === idOrSlug || m.slug === idOrSlug) ?? null;
+    return (
+      movies.find(
+        (m) =>
+          m.id === idOrSlug ||
+          m.slug === idOrSlug ||
+          (idOrSlug === 'hanh-tinh-khi-vuong-quoc-moi' && m.slug === 'kingdom-of-the-planet-of-the-apes') ||
+          (idOrSlug === 'kingdom-of-the-planet-of-the-apes' && m.slug === 'hanh-tinh-khi-vuong-quoc-moi')
+      ) ?? null
+    );
   },
 
   saveMovie(movieData: Partial<Movie> & { title: string; contentType: ContentType }): {

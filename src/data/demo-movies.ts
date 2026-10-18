@@ -381,8 +381,8 @@ export const demoMovies: Movie[] = [
     country: 'Mỹ',
     status: 'released',
     inTheaters: true,
-    gdriveUrl: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/preview',
-    playbackUrl: 'https://drive.google.com/file/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs/preview',
+    gdriveUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
+    playbackUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
   },
   {
     id: 'deadpool-wolverine',
