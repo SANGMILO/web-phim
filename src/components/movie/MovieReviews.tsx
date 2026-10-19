@@ -90,25 +90,26 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
     }
   };
 
-  const handleSubmitReply = (reviewId: string) => {
+  const handleSubmitReply = async (reviewId: string) => {
+    if (!isAuthenticated || !user) {
+      alert('Vui lòng đăng nhập để trả lời bình luận.');
+      return;
+    }
     if (replyContent.trim().length < 2) {
       alert('Vui lòng nhập nội dung câu trả lời ít nhất 2 ký tự.');
       return;
     }
 
     setReplySubmitting(true);
-    const replierName = isAuthenticated && user ? user.name : (replyGuestName.trim() || 'Khán giả CineVerse');
-    const replierId = isAuthenticated && user ? user.id : 'guest-' + Date.now();
-    const replierAvatar = user?.avatarUrl;
-
-    addReply(reviewId, {
-      userId: replierId,
-      userName: replierName,
-      userAvatar: replierAvatar,
+    const success = await addReply(reviewId, {
       content: replyContent.trim(),
     });
 
     setReplySubmitting(false);
+    if (!success) {
+      alert('Không thể gửi trả lời. Vui lòng thử lại.');
+      return;
+    }
     setReplyContent('');
     setReplyGuestName('');
     setActiveReplyReviewId(null);
@@ -137,27 +138,29 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
 
   const currentScore = hoverRating ?? rating;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated || !user) {
+      alert('Vui lòng đăng nhập để viết đánh giá.');
+      return;
+    }
     if (content.trim().length < 5) {
       alert('Vui lòng nhập nội dung đánh giá ít nhất 5 ký tự.');
       return;
     }
 
-    const reviewerName = isAuthenticated && user ? user.name : (guestName.trim() || 'Khán giả CineVerse');
-    const reviewerId = isAuthenticated && user ? user.id : 'guest-' + Date.now();
-    const reviewerAvatar = user?.avatarUrl;
-
-    addReview({
+    const success = await addReview({
       movieId,
       movieTitle,
-      userId: reviewerId,
-      userName: reviewerName,
-      userAvatar: reviewerAvatar,
       rating,
       content,
       hasSpoiler,
     });
+
+    if (!success) {
+      alert('Không thể lưu đánh giá. Vui lòng thử lại.');
+      return;
+    }
 
     setContent('');
     setHasSpoiler(false);
@@ -851,7 +854,10 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
 
                   <button
                     type="button"
-                    onClick={() => toggleLike(rev.id, user ? user.id : 'user-client')}
+                    onClick={() => {
+                      if (!isAuthenticated) alert('Vui lòng đăng nhập để thích đánh giá.');
+                      else void toggleLike(rev.id);
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -948,7 +954,10 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
 
                             <button
                               type="button"
-                              onClick={() => toggleReplyLike(rev.id, reply.id, user ? user.id : 'user-client')}
+                              onClick={() => {
+                                if (!isAuthenticated) alert('Vui lòng đăng nhập để thích trả lời.');
+                                else void toggleReplyLike(rev.id, reply.id);
+                              }}
                               style={{
                                 display: 'flex',
                                 alignItems: 'center',

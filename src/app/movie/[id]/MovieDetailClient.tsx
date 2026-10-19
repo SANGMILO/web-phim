@@ -561,7 +561,7 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
 
       {/* Reviews & Ratings */}
       <div className="container-main">
-        <MovieReviews movieId={movie.id} movieTitle={movie.title} />
+        <MovieReviews movieId={movie.slug} movieTitle={movie.title} />
       </div>
 
       {/* Related Movies */}

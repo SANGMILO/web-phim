@@ -795,7 +795,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
         </div>
 
         {/* Movie Reviews & Community Discussion */}
-        <MovieReviews movieId={movie.id} movieTitle={movie.title} />
+        <MovieReviews movieId={movie.slug} movieTitle={movie.title} />
 
         {/* Related titles */}
         {related.length > 0 && (

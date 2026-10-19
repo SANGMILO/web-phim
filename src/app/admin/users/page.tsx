@@ -24,7 +24,7 @@ import { useToast } from '@/components/admin/AdminToast';
 import type { UserRole, UserAccountStatus } from '@/types/user-admin';
 
 export default function AdminUsersPage() {
-  const { users, stats, updateUserStatus, updateUserRole, deleteUser, addUser } = useUsers();
+  const { users, stats, updateUserStatus, updateUserRole, deleteUser } = useUsers();
   const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,9 +52,11 @@ export default function AdminUsersPage() {
     });
   }, [users, searchQuery, roleFilter, statusFilter]);
 
-  const handleToggleStatus = (id: string, currentStatus: UserAccountStatus, name: string) => {
+  const handleToggleStatus = async (id: string, currentStatus: UserAccountStatus, name: string) => {
     const nextStatus: UserAccountStatus = currentStatus === 'active' ? 'suspended' : 'active';
-    const ok = updateUserStatus(id, nextStatus);
+    const target = users.find((user) => user.id === id);
+    if (!target) return;
+    const ok = await updateUserStatus(target, nextStatus);
     if (ok) {
       showToast(
         nextStatus === 'suspended'
@@ -65,16 +67,18 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleRoleChange = (id: string, newRole: UserRole, name: string) => {
-    const ok = updateUserRole(id, newRole);
+  const handleRoleChange = async (id: string, newRole: UserRole, name: string) => {
+    const target = users.find((user) => user.id === id);
+    if (!target) return;
+    const ok = await updateUserRole(target, newRole);
     if (ok) {
       showToast(`Đã nâng cấp quyền cho "${name}" thành ${newRole.toUpperCase()}`, 'success');
     }
   };
 
-  const handleDeleteUser = (id: string, name: string) => {
+  const handleDeleteUser = async (id: string, name: string) => {
     if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${name}" khỏi hệ thống?`)) {
-      const ok = deleteUser(id);
+      const ok = await deleteUser(id);
       if (ok) {
         showToast(`Đã xóa tài khoản "${name}"`, 'info');
       }
@@ -87,16 +91,7 @@ export default function AdminUsersPage() {
       showToast('Vui lòng nhập đầy đủ tên và email', 'warning');
       return;
     }
-    addUser({
-      name: newName,
-      email: newEmail,
-      role: newRole,
-      avatarUrl: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150`,
-    });
-    setNewName('');
-    setNewEmail('');
-    setShowAddModal(false);
-    showToast(`Đã thêm thành viên "${newName}" thành công!`, 'success');
+    showToast('Người dùng cần đăng ký qua trang đăng ký để Supabase tạo tài khoản an toàn.', 'warning');
   };
 
   return (

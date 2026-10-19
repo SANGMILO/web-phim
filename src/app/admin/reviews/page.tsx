@@ -68,9 +68,9 @@ export default function AdminReviewsPage() {
     });
   }, [allReviews, searchQuery, statusFilter, ratingFilter, spoilerFilter]);
 
-  const handleToggleStatus = (id: string, currentStatus: ReviewStatus, userName: string) => {
+  const handleToggleStatus = async (id: string, currentStatus: ReviewStatus, userName: string) => {
     const newStatus: ReviewStatus = currentStatus === 'approved' ? 'hidden' : 'approved';
-    const success = updateStatus(id, newStatus);
+    const success = await updateStatus(id, newStatus);
     if (success) {
       showToast(
         newStatus === 'hidden'
@@ -81,9 +81,9 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const handleDelete = (id: string, userName: string) => {
+  const handleDelete = async (id: string, userName: string) => {
     if (confirm(`Bạn có chắc muốn xóa vĩnh viễn đánh giá của "${userName}"?`)) {
-      const success = deleteReview(id);
+      const success = await deleteReview(id);
       if (success) {
         showToast(`Đã xóa đánh giá của "${userName}"`, 'info');
       }
