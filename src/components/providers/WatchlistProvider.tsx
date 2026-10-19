@@ -31,11 +31,13 @@ function subscribe(callback: () => void) {
   listeners.add(callback);
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', callback);
+    window.addEventListener('cineverse-watchlist-updated', callback);
   }
   return () => {
     listeners.delete(callback);
     if (typeof window !== 'undefined') {
       window.removeEventListener('storage', callback);
+      window.removeEventListener('cineverse-watchlist-updated', callback);
     }
   };
 }
@@ -71,7 +73,7 @@ function getServerSnapshot(): string[] {
 export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const ids = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  const has = useCallback((id: string) => ids.includes(id), [ids]);
+  const has = useCallback((id: string) => watchlistService.has(id), [ids]);
 
   const toggle = useCallback((id: string) => {
     watchlistService.toggle(id);

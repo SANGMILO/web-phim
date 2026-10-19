@@ -1,9 +1,6 @@
 'use client';
 
-/**
- * Watchlist persistence — uses localStorage for the demo.
- * Swap with an API-backed service for authenticated users.
- */
+import { movieStore } from './movies/movie-storage';
 
 const STORAGE_KEY = 'cineverse-watchlist';
 
@@ -11,7 +8,8 @@ function getIds(): string[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? Array.from(new Set(parsed)) : [];
   } catch {
     return [];
   }
@@ -19,7 +17,9 @@ function getIds(): string[] {
 
 function persist(ids: string[]): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  const unique = Array.from(new Set(ids));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(unique));
+  window.dispatchEvent(new CustomEvent('cineverse-watchlist-updated'));
 }
 
 export const watchlistService = {
@@ -27,28 +27,86 @@ export const watchlistService = {
     return getIds();
   },
 
-  has(movieId: string): boolean {
-    return getIds().includes(movieId);
-  },
-
-  add(movieId: string): void {
+  has(movieIdOrSlug: string): boolean {
+    if (!movieIdOrSlug) return false;
     const ids = getIds();
-    if (!ids.includes(movieId)) {
-      ids.unshift(movieId);
-      persist(ids);
+    const clean = String(movieIdOrSlug).trim().toLowerCase();
+    if (ids.some((i) => String(i).trim().toLowerCase() === clean)) {
+      return true;
     }
+    // Check canonical ID or slug if available in movieStore
+    if (typeof window !== 'undefined') {
+      const movie = movieStore.getMovieById(movieIdOrSlug);
+      if (movie) {
+        const mId = movie.id?.toLowerCase();
+        const mSlug = movie.slug?.toLowerCase();
+        return ids.some((i) => {
+          const ci = String(i).trim().toLowerCase();
+          return ci === mId || ci === mSlug;
+        });
+      }
+    }
+    return false;
   },
 
-  remove(movieId: string): void {
-    persist(getIds().filter((id) => id !== movieId));
+  add(movieIdOrSlug: string): void {
+    if (!movieIdOrSlug) return;
+    const clean = String(movieIdOrSlug).trim();
+    let canonicalId = clean;
+    let movieSlug = '';
+
+    if (typeof window !== 'undefined') {
+      const movie = movieStore.getMovieById(movieIdOrSlug);
+      if (movie?.id) {
+        canonicalId = movie.id;
+        movieSlug = movie.slug || '';
+      }
+    }
+
+    const ids = getIds();
+    // Prune existing duplicates or alias instances of this movie
+    const filtered = ids.filter((i) => {
+      const ci = String(i).trim().toLowerCase();
+      if (ci === canonicalId.toLowerCase()) return false;
+      if (movieSlug && ci === movieSlug.toLowerCase()) return false;
+      return true;
+    });
+
+    filtered.unshift(canonicalId);
+    persist(filtered);
   },
 
-  toggle(movieId: string): boolean {
-    if (watchlistService.has(movieId)) {
-      watchlistService.remove(movieId);
+  remove(movieIdOrSlug: string): void {
+    if (!movieIdOrSlug) return;
+    const clean = String(movieIdOrSlug).trim().toLowerCase();
+    let movieSlug = '';
+    let movieId = clean;
+
+    if (typeof window !== 'undefined') {
+      const movie = movieStore.getMovieById(movieIdOrSlug);
+      if (movie) {
+        movieId = movie.id?.toLowerCase() || clean;
+        movieSlug = movie.slug?.toLowerCase() || '';
+      }
+    }
+
+    const ids = getIds().filter((i) => {
+      const ci = String(i).trim().toLowerCase();
+      if (ci === clean) return false;
+      if (ci === movieId) return false;
+      if (movieSlug && ci === movieSlug) return false;
+      return true;
+    });
+
+    persist(ids);
+  },
+
+  toggle(movieIdOrSlug: string): boolean {
+    if (this.has(movieIdOrSlug)) {
+      this.remove(movieIdOrSlug);
       return false;
     } else {
-      watchlistService.add(movieId);
+      this.add(movieIdOrSlug);
       return true;
     }
   },

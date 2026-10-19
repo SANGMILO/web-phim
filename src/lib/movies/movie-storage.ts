@@ -98,8 +98,25 @@ export const movieStore = {
 
     if (exact) return exact;
 
-    // Fall back only to an exact normalized title. Broad franchise matching
-    // (for example any value containing "dune") makes sequels ambiguous.
+    // Specific well-known aliases / mappings without sequel ambiguity
+    if (clean === 'hanh-tinh-cat-dune-1' || clean === 'dune-1' || clean === 'hanh-tinh-cat-1') {
+      const dune1 = movies.find(m => m.id === 'dune-1' || m.slug === 'dune-1' || m.slug === 'hanh-tinh-cat-dune-1');
+      if (dune1) return dune1;
+    }
+    if (clean === 'hanh-tinh-cat-dune-2' || clean === 'dune-2' || clean === 'xu-cat-phan-hai' || clean === 'xu-cat-2') {
+      const dune2 = movies.find(m => m.id === 'dune-2' || m.slug === 'dune-2' || m.slug === 'hanh-tinh-cat-dune-2');
+      if (dune2) return dune2;
+    }
+    if (clean === 'avatar-3' || clean === 'avatar-fire-and-ash' || clean === 'avatar-lua-va-tro') {
+      const av3 = movies.find(m => m.id === 'avatar-3' || m.slug === 'avatar-3');
+      if (av3) return av3;
+    }
+    if (clean === 'hanh-tinh-khi-vuong-quoc-moi' || clean === 'kingdom-of-the-planet-of-the-apes') {
+      const apes = movies.find(m => m.slug === 'kingdom-of-the-planet-of-the-apes' || m.slug === 'hanh-tinh-khi-vuong-quoc-moi' || m.id === 'kingdom-of-the-planet-of-the-apes');
+      if (apes) return apes;
+    }
+
+    // Fall back to exact normalized title match
     return (
       movies.find((m) => {
         const mTitleSlug = generateSlug(m.title || '');
