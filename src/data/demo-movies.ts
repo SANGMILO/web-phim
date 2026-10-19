@@ -47,6 +47,8 @@ export const demoMovies: Movie[] = [
     status: 'released',
     featured: true,
     trending: true,
+    gdriveUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
+    playbackUrl: 'https://drive.google.com/file/d/1ykPSKpbGcE8Fu2zpk4QfaN_8kSr3iRUe/preview',
   },
   {
     id: 'dune-2',

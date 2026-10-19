@@ -29,7 +29,8 @@ function loadFromStorage(): Movie[] {
         if (
           m.gdriveUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
           m.playbackUrl?.includes('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs') ||
-          ((m.slug === 'kingdom-of-the-planet-of-the-apes' || m.slug === 'hanh-tinh-khi-vuong-quoc-moi') && !m.gdriveUrl)
+          ((m.slug === 'kingdom-of-the-planet-of-the-apes' || m.slug === 'hanh-tinh-khi-vuong-quoc-moi') && !m.gdriveUrl) ||
+          ((m.slug === 'dune-1' || m.slug === 'hanh-tinh-cat-dune-1' || m.id === 'dune-1') && !m.gdriveUrl)
         ) {
           updated = true;
           return {
@@ -84,18 +85,55 @@ export const movieStore = {
   getMovieById(idOrSlug: string): Movie | null {
     if (!idOrSlug) return null;
     const clean = decodeURIComponent(idOrSlug).trim().toLowerCase();
+    const cleanSlug = generateSlug(clean);
     const movies = this.getMovies();
+
+    // 1. Prioritize match that already has a Google Drive link attached
+    const withDrive = movies.find((m) => {
+      const hasLink = Boolean(m.gdriveUrl || m.playbackUrl);
+      if (!hasLink) return false;
+      const mId = m.id?.toLowerCase() || '';
+      const mSlug = m.slug?.toLowerCase() || '';
+      const mTitleSlug = generateSlug(m.title || '');
+      const mOrigSlug = generateSlug(m.originalTitle || '');
+
+      return (
+        mId === clean ||
+        mSlug === clean ||
+        mTitleSlug === clean ||
+        mTitleSlug === cleanSlug ||
+        mOrigSlug === clean ||
+        mOrigSlug === cleanSlug ||
+        (clean.includes('dune') && (mSlug.includes('dune') || mTitleSlug.includes('cat'))) ||
+        ((clean.includes('khi') || clean.includes('apes')) && (mSlug.includes('apes') || mTitleSlug.includes('khi')))
+      );
+    });
+
+    if (withDrive) return withDrive;
+
+    // 2. Direct ID or Slug match
+    const exact = movies.find((m) => {
+      const mId = m.id?.toLowerCase() || '';
+      const mSlug = m.slug?.toLowerCase() || '';
+      return mId === clean || mSlug === clean;
+    });
+
+    if (exact) return exact;
+
+    // 3. Fallback title/alias match
     return (
       movies.find((m) => {
-        const mId = m.id?.toLowerCase();
-        const mSlug = m.slug?.toLowerCase();
+        const mSlug = m.slug?.toLowerCase() || '';
+        const mTitleSlug = generateSlug(m.title || '');
+        const mOrigSlug = generateSlug(m.originalTitle || '');
+
         return (
-          mId === clean ||
-          mSlug === clean ||
-          (clean === 'hanh-tinh-khi-vuong-quoc-moi' && mSlug === 'kingdom-of-the-planet-of-the-apes') ||
-          (clean === 'kingdom-of-the-planet-of-the-apes' && mSlug === 'hanh-tinh-khi-vuong-quoc-moi') ||
-          (clean === 'dune-1' && mSlug === 'hanh-tinh-cat-dune-1') ||
-          (clean === 'hanh-tinh-cat-dune-1' && mSlug === 'dune-1')
+          mTitleSlug === clean ||
+          mTitleSlug === cleanSlug ||
+          mOrigSlug === clean ||
+          mOrigSlug === cleanSlug ||
+          (clean.includes('dune') && (mSlug.includes('dune') || mTitleSlug.includes('cat'))) ||
+          ((clean.includes('khi') || clean.includes('apes')) && (mSlug.includes('apes') || mTitleSlug.includes('khi')))
         );
       }) ?? null
     );

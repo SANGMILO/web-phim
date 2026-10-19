@@ -407,9 +407,11 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
               }}
             >
               {episodes.map((ep) => {
+                const isEp1 = ep.number === 1;
                 const epHasDrive = Boolean(
                   ep.gdriveUrl ||
-                  (ep.playbackUrl && isGoogleDriveUrl(ep.playbackUrl))
+                  (ep.playbackUrl && isGoogleDriveUrl(ep.playbackUrl)) ||
+                  (isEp1 && (movie.gdriveUrl || (movie.playbackUrl && isGoogleDriveUrl(movie.playbackUrl))))
                 );
                 return (
                   <Link

@@ -138,7 +138,10 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     ? 'official'
     : 'stream';
 
-  const selectedServer = userServer ?? defaultServer;
+  // Priority: If Google Drive is available, always default to 'gdrive' unless user explicitly switched to another source during this playback
+  const selectedServer = (userServer && (userServer !== 'official' || !hasGdrive))
+    ? userServer
+    : defaultServer;
   const setSelectedServer = (srv: 'gdrive' | 'official' | 'stream') => setUserServer(srv);
 
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -438,6 +441,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
             >
               {selectedServer === 'gdrive' && gdriveSource ? (
                 <iframe
+                  key={`gdrive-${movie.id}-${currentEpNumber}-${gdriveSource}`}
                   src={gdriveSource}
                   title={`${movie.title} - Full HD`}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -446,6 +450,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
                 />
               ) : selectedServer === 'official' && movie.trailerUrl ? (
                 <iframe
+                  key={`trailer-${movie.id}-${currentEpNumber}-${movie.trailerUrl}`}
                   src={`${movie.trailerUrl}?autoplay=1&rel=0&enablejsapi=1`}
                   title={movie.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
