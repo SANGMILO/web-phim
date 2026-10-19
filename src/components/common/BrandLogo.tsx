@@ -1,69 +1,115 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
+import Image from 'next/image';
 
 interface BrandLogoProps {
   size?: number;
   className?: string;
   style?: React.CSSProperties;
+  animated?: boolean;
 }
 
-export function BrandLogo({ size = 32, className, style }: BrandLogoProps) {
+export function BrandLogo({
+  size = 32,
+  className = '',
+  style,
+  animated = true,
+}: BrandLogoProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const borderRadius = Math.round(size * 0.24);
+
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 512 512"
-      width={size}
-      height={size}
-      className={className}
+    <div
+      className={`brand-logo-3d-wrap ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        display: 'inline-block',
-        verticalAlign: 'middle',
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: size,
+        height: size,
         flexShrink: 0,
-        borderRadius: Math.round(size * 0.24),
-        overflow: 'hidden',
-        boxShadow: '0 4px 12px rgba(229, 9, 20, 0.25)',
+        verticalAlign: 'middle',
+        perspective: '600px',
         ...style,
       }}
-      aria-label="CINEVERSE Logo"
+      aria-label="CINEVERSE 3D Logo"
     >
-      <defs>
-        <linearGradient id="c_bg_logo" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#14151B" />
-          <stop offset="100%" stopColor="#070709" />
-        </linearGradient>
-        <linearGradient id="c_accent_logo" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF334B" />
-          <stop offset="50%" stopColor="#E50914" />
-          <stop offset="100%" stopColor="#A8000A" />
-        </linearGradient>
-        <linearGradient id="c_silver_logo" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="100%" stopColor="#B0B5C0" />
-        </linearGradient>
-        <radialGradient id="c_subtle_logo" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FF2B36" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="#FF2B36" stopOpacity="0" />
-        </radialGradient>
-      </defs>
+      {/* 1. Pulsing Ambient Ruby Aura */}
+      {animated && (
+        <span
+          className="brand-logo-aura"
+          style={{
+            position: 'absolute',
+            inset: -Math.max(2, Math.round(size * 0.1)),
+            borderRadius: `${borderRadius + 4}px`,
+            background: 'radial-gradient(circle, rgba(255, 30, 50, 0.55) 0%, rgba(229, 9, 20, 0.2) 50%, transparent 75%)',
+            pointerEvents: 'none',
+            zIndex: 0,
+            opacity: isHovered ? 1 : 0.75,
+            transform: isHovered ? 'scale(1.15)' : 'scale(1)',
+            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            filter: 'blur(4px)',
+          }}
+        />
+      )}
 
-      {/* Frame Base */}
-      <rect x="28" y="28" width="456" height="456" rx="114" fill="url(#c_bg_logo)" stroke="#262835" strokeWidth="3" />
-      <circle cx="256" cy="256" r="180" fill="url(#c_subtle_logo)" />
+      {/* 2. Main 3D Emblem Container with 3D Tilt */}
+      <div
+        className="brand-logo-inner"
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+          borderRadius: `${borderRadius}px`,
+          overflow: 'hidden',
+          zIndex: 1,
+          boxShadow: isHovered
+            ? '0 8px 24px rgba(229, 9, 20, 0.5), 0 2px 8px rgba(0, 0, 0, 0.8)'
+            : '0 4px 14px rgba(229, 9, 20, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6)',
+          transform: isHovered
+            ? 'rotateY(-6deg) rotateX(6deg) scale(1.08)'
+            : 'rotateY(0deg) rotateX(0deg) scale(1)',
+          transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          border: '1px solid rgba(255, 80, 95, 0.35)',
+          background: '#0c0d13',
+        }}
+      >
+        {/* Photorealistic 3D Emblem */}
+        <Image
+          src="/logo-3d.png"
+          alt="CINEVERSE"
+          width={size}
+          height={size}
+          priority
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
 
-      {/* Minimalist Dual Arc Cinema C */}
-      <path
-        d="M 340 160 C 300 120 240 108 185 130 C 120 156 80 220 84 290 C 88 360 144 416 215 416 C 265 416 312 390 340 352 C 348 342 340 330 328 330 L 285 330 C 275 330 268 335 260 342 C 240 360 212 368 188 358 C 150 342 136 300 144 260 C 152 220 188 188 230 184 C 255 182 280 192 296 210 L 332 174 C 340 166 340 156 340 160 Z"
-        fill="url(#c_accent_logo)"
-      />
-
-      {/* Double Forward Chevron (Fast-forward / Cinema Stream) */}
-      <path
-        d="M 230 216 L 270 256 L 230 296 C 224 302 214 298 214 288 L 214 224 C 214 214 224 210 230 216 Z"
-        fill="url(#c_silver_logo)"
-      />
-      <path
-        d="M 276 216 L 316 256 L 276 296 C 270 302 260 298 260 288 L 260 224 C 260 214 270 210 276 216 Z"
-        fill="#FFFFFF"
-      />
-    </svg>
+        {/* 3. Cinematic Shimmer / Light Sweep Beam (Logo Động) */}
+        {animated && (
+          <span
+            className="brand-shimmer-sweep"
+            style={{
+              position: 'absolute',
+              top: '-50%',
+              left: '-50%',
+              width: '200%',
+              height: '200%',
+              pointerEvents: 'none',
+              background: 'linear-gradient(135deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%)',
+              mixBlendMode: 'overlay',
+            }}
+          />
+        )}
+      </div>
+    </div>
   );
 }

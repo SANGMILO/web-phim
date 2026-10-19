@@ -52,14 +52,14 @@ export function Footer() {
                 fontWeight: 800,
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '10px',
+                gap: '12px',
                 marginBottom: '12px',
                 textDecoration: 'none',
               }}
             >
-              <BrandLogo size={28} />
-              <span>
-                <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
+              <BrandLogo size={32} />
+              <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 20px rgba(229, 9, 20, 0.4)' }}>CINE</span>
                 <span>VERSE</span>
               </span>
             </Link>

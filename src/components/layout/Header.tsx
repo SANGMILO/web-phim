@@ -107,7 +107,7 @@ export function Header() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '12px',
               fontFamily: 'var(--font-display)',
               fontSize: '24px',
               fontWeight: 800,
@@ -117,10 +117,10 @@ export function Header() {
               textDecoration: 'none',
             }}
           >
-            <BrandLogo size={32} />
-            <span>
-              <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
-              <span>VERSE</span>
+            <BrandLogo size={38} />
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 24px rgba(229, 9, 20, 0.45)' }}>CINE</span>
+              <span style={{ color: 'var(--text-primary)' }}>VERSE</span>
             </span>
           </Link>
 

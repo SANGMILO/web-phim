@@ -121,7 +121,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
           }}
         >
           <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <BrandLogo size={26} />
+            <BrandLogo size={30} />
             <span
               className="font-display"
               style={{
@@ -131,7 +131,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 lineHeight: 1,
               }}
             >
-              <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
+              <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 16px rgba(229, 9, 20, 0.4)' }}>CINE</span>
               <span style={{ color: 'var(--text-primary)' }}>VERSE</span>
             </span>
             <span
