@@ -11,7 +11,7 @@ interface BrandLogoProps {
 }
 
 export function BrandLogo({
-  size = 32,
+  size = 36,
   className = '',
   style,
   animated = true,
@@ -36,28 +36,27 @@ export function BrandLogo({
         perspective: '600px',
         ...style,
       }}
-      aria-label="CINEVERSE 3D Logo"
+      aria-label="CINEVERSE Cosmic 3D Logo"
     >
-      {/* 1. Pulsing Ambient Ruby Aura */}
+      {/* 1. Flowing Cosmic Gradient Aura (Gradient Animation) */}
       {animated && (
         <span
-          className="brand-logo-aura"
+          className="brand-cosmic-aura"
           style={{
             position: 'absolute',
-            inset: -Math.max(2, Math.round(size * 0.1)),
-            borderRadius: `${borderRadius + 4}px`,
-            background: 'radial-gradient(circle, rgba(255, 30, 50, 0.55) 0%, rgba(229, 9, 20, 0.2) 50%, transparent 75%)',
+            inset: -Math.max(3, Math.round(size * 0.12)),
+            borderRadius: `${borderRadius + 6}px`,
             pointerEvents: 'none',
             zIndex: 0,
-            opacity: isHovered ? 1 : 0.75,
-            transform: isHovered ? 'scale(1.15)' : 'scale(1)',
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            filter: 'blur(4px)',
+            opacity: isHovered ? 1 : 0.8,
+            transform: isHovered ? 'scale(1.2)' : 'scale(1)',
+            transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+            filter: 'blur(5px)',
           }}
         />
       )}
 
-      {/* 2. Main 3D Emblem Container with 3D Tilt */}
+      {/* 2. Main 3D Emblem Container with 3D Parallax Tilt */}
       <div
         className="brand-logo-inner"
         style={{
@@ -68,17 +67,17 @@ export function BrandLogo({
           overflow: 'hidden',
           zIndex: 1,
           boxShadow: isHovered
-            ? '0 8px 24px rgba(229, 9, 20, 0.5), 0 2px 8px rgba(0, 0, 0, 0.8)'
-            : '0 4px 14px rgba(229, 9, 20, 0.3), 0 2px 6px rgba(0, 0, 0, 0.6)',
+            ? '0 8px 26px rgba(139, 92, 246, 0.5), 0 0 20px rgba(236, 72, 153, 0.4), 0 2px 8px rgba(0, 0, 0, 0.9)'
+            : '0 4px 16px rgba(139, 92, 246, 0.3), 0 2px 6px rgba(0, 0, 0, 0.7)',
           transform: isHovered
-            ? 'rotateY(-6deg) rotateX(6deg) scale(1.08)'
+            ? 'rotateY(-8deg) rotateX(6deg) scale(1.08)'
             : 'rotateY(0deg) rotateX(0deg) scale(1)',
           transition: 'all 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-          border: '1px solid rgba(255, 80, 95, 0.35)',
-          background: '#0c0d13',
+          border: '1px solid rgba(168, 85, 247, 0.35)',
+          background: '#07070b',
         }}
       >
-        {/* Photorealistic 3D Emblem */}
+        {/* Photorealistic 3D Crescent & Filmstrip Orbit Image */}
         <Image
           src="/logo-3d.png"
           alt="CINEVERSE"
@@ -93,7 +92,22 @@ export function BrandLogo({
           }}
         />
 
-        {/* 3. Cinematic Shimmer / Light Sweep Beam (Logo Động) */}
+        {/* 3. Live Animated Gradient Wave Overlay (Gradient Animation) */}
+        {animated && (
+          <span
+            className="brand-gradient-flow-overlay"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              mixBlendMode: 'color-dodge',
+              opacity: isHovered ? 0.9 : 0.65,
+              transition: 'opacity 0.3s',
+            }}
+          />
+        )}
+
+        {/* 4. Cinematic Anamorphic Shimmer Beam */}
         {animated && (
           <span
             className="brand-shimmer-sweep"
@@ -104,7 +118,7 @@ export function BrandLogo({
               width: '200%',
               height: '200%',
               pointerEvents: 'none',
-              background: 'linear-gradient(135deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%)',
+              background: 'linear-gradient(135deg, transparent 35%, rgba(255, 255, 255, 0.8) 50%, transparent 65%)',
               mixBlendMode: 'overlay',
             }}
           />

@@ -120,8 +120,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             justifyContent: 'space-between',
           }}
         >
-          <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <BrandLogo size={30} />
+          <Link href="/admin" className="brand-logo-link" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <BrandLogo size={32} />
             <span
               className="font-display"
               style={{
@@ -131,8 +131,9 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 lineHeight: 1,
               }}
             >
-              <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 16px rgba(229, 9, 20, 0.4)' }}>CINE</span>
-              <span style={{ color: 'var(--text-primary)' }}>VERSE</span>
+              <span>CINE</span>
+              <span className="brand-gradient-v">V</span>
+              <span>ERSE</span>
             </span>
             <span
               style={{

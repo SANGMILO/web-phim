@@ -46,6 +46,7 @@ export function Footer() {
           <div>
             <Link
               href="/"
+              className="brand-logo-link"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: '22px',
@@ -57,10 +58,11 @@ export function Footer() {
                 textDecoration: 'none',
               }}
             >
-              <BrandLogo size={32} />
+              <BrandLogo size={34} />
               <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 20px rgba(229, 9, 20, 0.4)' }}>CINE</span>
-                <span>VERSE</span>
+                <span>CINE</span>
+                <span className="brand-gradient-v">V</span>
+                <span>ERSE</span>
               </span>
             </Link>
             <p

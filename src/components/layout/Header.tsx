@@ -104,6 +104,7 @@ export function Header() {
           {/* Logo */}
           <Link
             href="/"
+            className="brand-logo-link"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -117,10 +118,11 @@ export function Header() {
               textDecoration: 'none',
             }}
           >
-            <BrandLogo size={38} />
+            <BrandLogo size={40} />
             <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-              <span style={{ color: 'var(--accent-crimson)', textShadow: '0 0 24px rgba(229, 9, 20, 0.45)' }}>CINE</span>
-              <span style={{ color: 'var(--text-primary)' }}>VERSE</span>
+              <span>CINE</span>
+              <span className="brand-gradient-v">V</span>
+              <span>ERSE</span>
             </span>
           </Link>
 
