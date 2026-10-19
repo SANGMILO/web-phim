@@ -2,7 +2,7 @@
 
 import React, { useRef, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Play, Star, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Play, Star, ChevronRight, ChevronLeft } from 'lucide-react';
 import type { Movie } from '@/types/movie';
 import { MovieImage } from '@/components/common/MovieImage';
 import { isReducedMotion } from '@/lib/animations/useAnimations';
@@ -125,7 +125,6 @@ export function EditorialShowcase({ movies }: EditorialShowcaseProps) {
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-violet)', marginBottom: '8px' }}>
-            <Sparkles size={16} />
             <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               Biên tập viên tuyển chọn
             </span>
@@ -135,35 +134,8 @@ export function EditorialShowcase({ movies }: EditorialShowcaseProps) {
           </h2>
         </div>
 
-        {/* Status indicator & Carousel buttons */}
+        {/* Carousel buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span
-            style={{
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(255,255,255,0.04)',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: isPaused ? 'var(--accent-crimson)' : 'var(--accent-cyan)',
-                boxShadow: isPaused ? '0 0 6px var(--accent-crimson)' : '0 0 8px var(--accent-cyan)',
-                display: 'inline-block',
-                transition: 'all 0.3s ease',
-              }}
-            />
-            {isPaused ? 'Tạm dừng' : 'Băng chuyền tự động'}
-          </span>
-
           <button
             onClick={() => handleManualScroll('left')}
             className="btn-icon"
