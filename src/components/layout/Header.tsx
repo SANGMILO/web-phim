@@ -348,10 +348,60 @@ export function Header() {
                         boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
                       }}
                     >
-                      <div style={{ paddingBottom: '10px', marginBottom: '8px', borderBottom: '1px solid var(--border-subtle)' }}>
-                        <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{user.name}</p>
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</p>
-                      </div>
+                      <Link
+                        href="/profile"
+                        onClick={() => setUserDropdown(false)}
+                        style={{
+                          display: 'block',
+                          padding: '8px 10px',
+                          marginBottom: '8px',
+                          borderRadius: 'var(--radius-sm)',
+                          borderBottom: '1px solid var(--border-subtle)',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          transition: 'all 0.2s ease',
+                          textDecoration: 'none',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                            {user.name}
+                          </p>
+                          <span style={{ fontSize: '10px', color: '#F59E0B', fontWeight: 700, background: 'rgba(245, 158, 11, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                            VIP
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0 0 0' }}>
+                          {user.email}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent-crimson)', marginTop: '6px', fontWeight: 600 }}>
+                          <span>Hồ sơ & Đổi mật khẩu</span> →
+                        </div>
+                      </Link>
+
+                      <Link
+                        href="/profile"
+                        onClick={() => setUserDropdown(false)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 10px',
+                          fontSize: '13px',
+                          color: 'var(--text-secondary)',
+                          borderRadius: 'var(--radius-sm)',
+                          transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <User size={15} /> Quản lý tài khoản
+                      </Link>
 
                       <Link
                         href="/watchlist"
@@ -584,6 +634,23 @@ export function Header() {
               ))}
             </div>
             <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '8px', paddingTop: '16px' }}>
+              {user && (
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <User size={18} /> Hồ sơ & Ví ({user.name})
+                </Link>
+              )}
               <Link
                 href="/watchlist"
                 style={{

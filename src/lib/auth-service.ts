@@ -132,5 +132,27 @@ export const authService = {
     notify();
     return DEFAULT_DEMO_USER;
   },
+
+  updateUser(partial: Partial<User>) {
+    if (!cachedUser) return;
+    cachedUser = { ...cachedUser, ...partial };
+    if (!isSupabaseConfigured() && typeof window !== 'undefined') {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(cachedUser));
+    }
+    notify();
+  },
+
+  async updatePassword(newPassword: string): Promise<AuthResult> {
+    if (newPassword.length < 6) {
+      return { success: false, error: 'Mật khẩu phải chứa ít nhất 6 ký tự.' };
+    }
+    if (isSupabaseConfigured()) {
+      const { data, error } = await createClient().auth.updateUser({ password: newPassword });
+      if (error) return { success: false, error: error.message };
+      const user = data.user ? mapUser(data.user) : undefined;
+      return { success: true, user };
+    }
+    return { success: true, user: cachedUser || undefined };
+  },
 };
 
