@@ -13,6 +13,7 @@ import {
   Database,
   MessageSquare,
   Users,
+  CreditCard,
 } from 'lucide-react';
 import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
 import { useReviews } from '@/lib/reviews/useReviews';
@@ -54,6 +55,13 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
       label: 'Quản lý người dùng',
       icon: Users,
       badge: users.length,
+    },
+    {
+      href: '/admin/payments',
+      label: 'Cấu hình thanh toán & QR',
+      icon: CreditCard,
+      badge: 'QR',
+      isAccent: true,
     },
     {
       href: '/admin/movies/new',

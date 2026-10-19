@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { profileService, type UserProfileData, type WalletTransaction } from '@/lib/profile/profile-service';
+import { paymentService } from '@/lib/payments/payment-service';
+import type { PaymentSettings } from '@/types/payment';
 import { useWatchlist } from '@/components/providers/WatchlistProvider';
 
 // Authentic Cinema Avatar Presets (Zero AI feel, Studio Monograms & Cinema Tools)
@@ -190,17 +192,21 @@ export function ProfileClient() {
   const [passToast, setPassToast] = useState<string | null>(null);
 
   // Form states - Top up
+  const [paymentConfig, setPaymentConfig] = useState<PaymentSettings>(paymentService.getSettings());
   const [selectedAmount, setSelectedAmount] = useState<number>(100000);
   const [customAmount, setCustomAmount] = useState<string>('');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'vietqr' | 'momo' | 'zalopay' | 'card'>('vietqr');
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [qrCountdown, setQrCountdown] = useState<number>(900); // 15 mins in sec
   const [walletToast, setWalletToast] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-  // Keep profile in sync safely
+  // Keep profile & payment config in sync safely
   useEffect(() => {
     const p = profileService.getProfile(currentUserId, user?.name, user?.email);
     setProfile(p);
+    setPaymentConfig(paymentService.getSettings());
+
     if (user?.name) {
       setDisplayName(user.name);
     } else if (p.displayName) {
@@ -211,11 +217,19 @@ export function ProfileClient() {
     if (p.avatarUrl) setSelectedAvatar(p.avatarUrl);
     if (p.favoriteGenres) setSelectedGenres(p.favoriteGenres);
 
-    const unsubscribe = profileService.subscribe(() => {
+    const unsubscribeProfile = profileService.subscribe(() => {
       const refreshed = profileService.getProfile(currentUserId, user?.name, user?.email);
       setProfile(refreshed);
     });
-    return unsubscribe;
+
+    const unsubscribePayment = paymentService.subscribe(() => {
+      setPaymentConfig(paymentService.getSettings());
+    });
+
+    return () => {
+      unsubscribeProfile();
+      unsubscribePayment();
+    };
   }, [currentUserId, user?.name, user?.email]);
 
   // QR Countdown timer
@@ -336,6 +350,15 @@ export function ProfileClient() {
     setConfirmPassword('');
     setPassToast('Đổi mật khẩu thành công! Tài khoản đã được bảo vệ.');
     setTimeout(() => setPassToast(null), 4000);
+  };
+
+  // Copy helper
+  const handleCopyText = (text: string, label: string) => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopyFeedback(`Đã sao chép ${label}!`);
+    setTimeout(() => setCopyFeedback(null), 2500);
   };
 
   // Handle Top-up Modal
@@ -1456,11 +1479,11 @@ export function ProfileClient() {
 
               {/* Amount buttons */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-                {TOP_UP_AMOUNTS.map((item) => {
+                {paymentConfig.presetPackages.map((item) => {
                   const isSelected = selectedAmount === item.amount && !customAmount;
                   return (
                     <button
-                      key={item.amount}
+                      key={item.id || item.amount}
                       type="button"
                       onClick={() => {
                         setSelectedAmount(item.amount);
@@ -1470,7 +1493,7 @@ export function ProfileClient() {
                         padding: '14px 10px',
                         borderRadius: '10px',
                         background: isSelected ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.04)',
-                        border: isSelected ? '2px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.1)',
+                        border: isSelected ? '2px solid #F59E0B' : item.isPopular ? '1.5px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
                         cursor: 'pointer',
                         textAlign: 'center',
                         position: 'relative',
@@ -1478,18 +1501,18 @@ export function ProfileClient() {
                       }}
                     >
                       <div style={{ fontSize: '15px', fontWeight: 700, color: isSelected ? '#FBBF24' : '#fff' }}>
-                        {item.label}
+                        {item.amount.toLocaleString('vi-VN')} ₫
                       </div>
-                      {item.bonus && (
+                      {item.badge && (
                         <div
                           style={{
                             fontSize: '10px',
                             fontWeight: 700,
-                            color: '#10B981',
+                            color: item.badge.includes('Bonus') || item.badge.includes('+') ? '#10B981' : '#F59E0B',
                             marginTop: '4px',
                           }}
                         >
-                          {item.bonus}
+                          {item.badge}
                         </div>
                       )}
                     </button>
@@ -1526,54 +1549,80 @@ export function ProfileClient() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
                 {[
-                  { key: 'vietqr', title: 'Chuyển khoản VietQR', desc: 'Quét mã QR tự động nhận tiền trong 30s qua App Ngân hàng (MB, VCB, Techcombank...)', badge: 'Khuyên dùng' },
-                  { key: 'momo', title: 'Ví điện tử MoMo', desc: 'Thanh toán trực tiếp bằng ứng dụng MoMo', badge: 'Tiện lợi' },
-                  { key: 'zalopay', title: 'Ví điện tử ZaloPay', desc: 'Quét mã qua Zalo hoặc ZaloPay', badge: '' },
-                  { key: 'card', title: 'Thẻ ATM / Visa / Mastercard', desc: 'Cổng thanh toán bảo mật Napas / OnePay', badge: '' },
-                ].map((m) => {
-                  const isChecked = selectedPaymentMethod === m.key;
-                  return (
-                    <div
-                      key={m.key}
-                      onClick={() => setSelectedPaymentMethod(m.key as any)}
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: '10px',
-                        background: isChecked ? 'rgba(229, 9, 20, 0.1)' : 'rgba(255, 255, 255, 0.03)',
-                        border: isChecked ? '1px solid #E50914' : '1px solid rgba(255, 255, 255, 0.08)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: isChecked ? '#fff' : '#D1D5DB' }}>
-                            {m.title}
-                          </span>
-                          {m.badge && (
-                            <span style={{ fontSize: '10px', background: '#E50914', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                              {m.badge}
-                            </span>
-                          )}
-                        </div>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8E8F99' }}>{m.desc}</p>
-                      </div>
+                  {
+                    key: 'vietqr',
+                    title: 'Chuyển khoản VietQR',
+                    desc: paymentConfig.bank.note || 'Quét mã QR tự động nhận tiền trong 30s qua App Ngân hàng (MB, VCB, Techcombank...)',
+                    badge: 'Khuyên dùng',
+                    enabled: paymentConfig.methods.vietqr,
+                  },
+                  {
+                    key: 'momo',
+                    title: 'Ví điện tử MoMo',
+                    desc: paymentConfig.momo.note || 'Thanh toán trực tiếp bằng ứng dụng MoMo',
+                    badge: 'Tiện lợi',
+                    enabled: paymentConfig.methods.momo,
+                  },
+                  {
+                    key: 'zalopay',
+                    title: 'Ví điện tử ZaloPay',
+                    desc: paymentConfig.zalopay.note || 'Quét mã qua Zalo hoặc ZaloPay',
+                    badge: '',
+                    enabled: paymentConfig.methods.zalopay,
+                  },
+                  {
+                    key: 'card',
+                    title: paymentConfig.card.gatewayName || 'Thẻ ATM / Visa / Mastercard',
+                    desc: paymentConfig.card.note || 'Cổng thanh toán bảo mật Napas / OnePay',
+                    badge: '',
+                    enabled: paymentConfig.methods.card,
+                  },
+                ]
+                  .filter((m) => m.enabled)
+                  .map((m) => {
+                    const isChecked = selectedPaymentMethod === m.key;
+                    return (
                       <div
+                        key={m.key}
+                        onClick={() => setSelectedPaymentMethod(m.key as any)}
                         style={{
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          border: isChecked ? '5px solid #E50914' : '2px solid rgba(255, 255, 255, 0.2)',
-                          background: isChecked ? '#fff' : 'transparent',
-                          flexShrink: 0,
+                          padding: '12px 16px',
+                          borderRadius: '10px',
+                          background: isChecked ? 'rgba(229, 9, 20, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                          border: isChecked ? '1px solid #E50914' : '1px solid rgba(255, 255, 255, 0.08)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
                         }}
-                      />
-                    </div>
-                  );
-                })}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: isChecked ? '#fff' : '#D1D5DB' }}>
+                              {m.title}
+                            </span>
+                            {m.badge && (
+                              <span style={{ fontSize: '10px', background: '#E50914', color: '#fff', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                {m.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#8E8F99' }}>{m.desc}</p>
+                        </div>
+                        <div
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: isChecked ? '5px solid #E50914' : '2px solid rgba(255, 255, 255, 0.2)',
+                            background: isChecked ? '#fff' : 'transparent',
+                            flexShrink: 0,
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
               </div>
 
               <button
@@ -2004,74 +2053,133 @@ export function ProfileClient() {
               <X size={16} />
             </button>
 
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, marginBottom: '12px' }}>
-              <QrCode size={13} /> VIETQR CHUYỂN KHOẢN TỰ ĐỘNG
+            {/* Dynamic Modal Badge */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background:
+                  selectedPaymentMethod === 'momo'
+                    ? 'rgba(236, 72, 153, 0.15)'
+                    : selectedPaymentMethod === 'zalopay'
+                    ? 'rgba(59, 130, 246, 0.15)'
+                    : selectedPaymentMethod === 'card'
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : 'rgba(245, 158, 11, 0.15)',
+                color:
+                  selectedPaymentMethod === 'momo'
+                    ? '#EC4899'
+                    : selectedPaymentMethod === 'zalopay'
+                    ? '#3B82F6'
+                    : selectedPaymentMethod === 'card'
+                    ? '#10B981'
+                    : '#F59E0B',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: 700,
+                marginBottom: '10px',
+              }}
+            >
+              {selectedPaymentMethod === 'momo' ? (
+                <>
+                  <Smartphone size={13} /> VÍ ĐIỆN TỬ MOMO
+                </>
+              ) : selectedPaymentMethod === 'zalopay' ? (
+                <>
+                  <Wallet size={13} /> VÍ ĐIỆN TỬ ZALOPAY
+                </>
+              ) : selectedPaymentMethod === 'card' ? (
+                <>
+                  <CreditCard size={13} /> {paymentConfig.card.gatewayName.toUpperCase()}
+                </>
+              ) : (
+                <>
+                  <QrCode size={13} /> VIETQR CHUYỂN KHOẢN TỰ ĐỘNG
+                </>
+              )}
             </div>
 
             <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px 0', color: '#fff' }}>
-              Quét Mã Để Nạp Tiền
+              {selectedPaymentMethod === 'card' ? 'Xác Nhận Nạp Tiền Qua Thẻ' : 'Quét Mã Để Nạp Tiền'}
             </h3>
             <p style={{ fontSize: '13px', color: '#8E8F99', margin: '0 0 16px 0' }}>
-              Mở ứng dụng Ngân hàng hoặc MoMo quét mã QR bên dưới
+              {selectedPaymentMethod === 'momo'
+                ? 'Mở ứng dụng MoMo quét mã hoặc chuyển đến số ví bên dưới'
+                : selectedPaymentMethod === 'zalopay'
+                ? 'Mở ứng dụng Zalo / ZaloPay quét mã hoặc chuyển đến số ví'
+                : selectedPaymentMethod === 'card'
+                ? 'Thanh toán bảo mật chuẩn 3D-Secure qua cổng thẻ nội địa & quốc tế'
+                : 'Mở ứng dụng Ngân hàng (MB, VCB, Techcombank...) quét mã QR'}
             </p>
 
-            {/* QR Code Graphic Frame */}
-            <div
-              style={{
-                background: '#fff',
-                padding: '16px',
-                borderRadius: '16px',
-                width: '210px',
-                height: '210px',
-                margin: '0 auto 18px auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
-              }}
-            >
-              <svg viewBox="0 0 100 100" width="100%" height="100%">
-                <rect width="100" height="100" fill="#fff" />
-                <rect x="10" y="10" width="24" height="24" fill="#000" rx="3" />
-                <rect x="14" y="14" width="16" height="16" fill="#fff" rx="2" />
-                <rect x="18" y="18" width="8" height="8" fill="#000" rx="1" />
+            {copyFeedback && (
+              <div
+                style={{
+                  background: 'rgba(16, 185, 129, 0.2)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#10B981',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  marginBottom: '12px',
+                }}
+              >
+                ✓ {copyFeedback}
+              </div>
+            )}
 
-                <rect x="66" y="10" width="24" height="24" fill="#000" rx="3" />
-                <rect x="70" y="14" width="16" height="16" fill="#fff" rx="2" />
-                <rect x="74" y="18" width="8" height="8" fill="#000" rx="1" />
+            {/* QR Code Container (for QR methods) */}
+            {selectedPaymentMethod !== 'card' && (
+              <div
+                style={{
+                  background: '#fff',
+                  padding: '12px',
+                  borderRadius: '16px',
+                  width: '210px',
+                  height: '210px',
+                  margin: '0 auto 16px auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
+                  overflow: 'hidden',
+                }}
+              >
+                {selectedPaymentMethod === 'momo' && paymentConfig.momo.customQrUrl ? (
+                  <img
+                    src={paymentConfig.momo.customQrUrl}
+                    alt="MoMo QR"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : selectedPaymentMethod === 'zalopay' && paymentConfig.zalopay.customQrUrl ? (
+                  <img
+                    src={paymentConfig.zalopay.customQrUrl}
+                    alt="ZaloPay QR"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                ) : (
+                  <img
+                    src={
+                      paymentConfig.bank.customQrUrl ||
+                      paymentService.getVietQrUrl({
+                        bankId: paymentConfig.bank.bankId,
+                        accountNumber: paymentConfig.bank.accountNumber,
+                        amount: finalTopUpAmount,
+                        memo: `${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`,
+                        accountHolder: paymentConfig.bank.accountHolder,
+                      })
+                    }
+                    alt="Payment QR"
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                )}
+              </div>
+            )}
 
-                <rect x="10" y="66" width="24" height="24" fill="#000" rx="3" />
-                <rect x="14" y="70" width="16" height="16" fill="#fff" rx="2" />
-                <rect x="18" y="74" width="8" height="8" fill="#000" rx="1" />
-
-                <rect x="42" y="12" width="6" height="6" fill="#E50914" />
-                <rect x="52" y="12" width="6" height="6" fill="#000" />
-                <rect x="42" y="24" width="6" height="6" fill="#000" />
-                <rect x="52" y="24" width="6" height="6" fill="#E50914" />
-
-                <rect x="12" y="42" width="6" height="6" fill="#000" />
-                <rect x="24" y="42" width="6" height="6" fill="#000" />
-                <rect x="12" y="52" width="6" height="6" fill="#000" />
-                <rect x="24" y="52" width="6" height="6" fill="#000" />
-
-                <rect x="40" y="40" width="20" height="20" fill="#08090C" rx="4" />
-                <text x="50" y="54" fontSize="11" fill="#F59E0B" textAnchor="middle" fontWeight="bold">CV</text>
-
-                <rect x="66" y="42" width="6" height="6" fill="#000" />
-                <rect x="78" y="42" width="6" height="6" fill="#000" />
-                <rect x="66" y="52" width="6" height="6" fill="#000" />
-                <rect x="78" y="52" width="6" height="6" fill="#000" />
-
-                <rect x="42" y="66" width="6" height="6" fill="#000" />
-                <rect x="52" y="66" width="6" height="6" fill="#000" />
-                <rect x="42" y="78" width="6" height="6" fill="#000" />
-                <rect x="52" y="78" width="6" height="6" fill="#000" />
-                <rect x="66" y="66" width="6" height="6" fill="#000" />
-                <rect x="78" y="78" width="6" height="6" fill="#000" />
-              </svg>
-            </div>
-
-            {/* Transfer details */}
+            {/* Transfer details based on method */}
             <div
               style={{
                 background: 'rgba(255, 255, 255, 0.04)',
@@ -2081,32 +2189,163 @@ export function ProfileClient() {
                 fontSize: '12px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '6px',
+                gap: '8px',
                 marginBottom: '16px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8E8F99' }}>Số tiền:</span>
-                <span style={{ fontWeight: 800, color: '#FBBF24', fontSize: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#8E8F99' }}>Số tiền nạp:</span>
+                <span style={{ fontWeight: 800, color: '#FBBF24', fontSize: '15px' }}>
                   {finalTopUpAmount.toLocaleString('vi-VN')} ₫
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8E8F99' }}>Ngân hàng:</span>
-                <span style={{ fontWeight: 600, color: '#fff' }}>MB BANK (Quân Đội)</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8E8F99' }}>Số tài khoản:</span>
-                <span style={{ fontWeight: 700, color: '#fff', letterSpacing: '1px' }}>9988 2233 6688</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#8E8F99' }}>Nội dung CK:</span>
-                <span style={{ fontWeight: 700, color: '#10B981' }}>CV NAP {currentUserId.toUpperCase()}</span>
-              </div>
+
+              {selectedPaymentMethod === 'vietqr' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Ngân hàng:</span>
+                    <span style={{ fontWeight: 600, color: '#fff' }}>{paymentConfig.bank.bankName}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Số tài khoản:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+                        {paymentConfig.bank.accountNumber}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(paymentConfig.bank.accountNumber.replace(/\s+/g, ''), 'Số tài khoản')}
+                        style={{ background: 'transparent', border: 'none', color: '#F59E0B', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép STK"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Chủ tài khoản:</span>
+                    <span style={{ fontWeight: 700, color: '#F59E0B' }}>{paymentConfig.bank.accountHolder}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Nội dung CK:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#10B981' }}>
+                        {paymentConfig.bank.memoPrefix} {currentUserId.toUpperCase()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(`${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`, 'Nội dung chuyển khoản')}
+                        style={{ background: 'transparent', border: 'none', color: '#10B981', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép nội dung"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedPaymentMethod === 'momo' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Ví nhận tiền:</span>
+                    <span style={{ fontWeight: 600, color: '#EC4899' }}>MoMo</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Số điện thoại ví:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#fff' }}>{paymentConfig.momo.phone}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(paymentConfig.momo.phone.replace(/\s+/g, ''), 'Số điện thoại MoMo')}
+                        style={{ background: 'transparent', border: 'none', color: '#EC4899', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép số MoMo"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Tên người nhận:</span>
+                    <span style={{ fontWeight: 700, color: '#F59E0B' }}>{paymentConfig.momo.accountHolder}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Lời nhắn MoMo:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#10B981' }}>
+                        {paymentConfig.bank.memoPrefix} {currentUserId.toUpperCase()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(`${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`, 'Lời nhắn')}
+                        style={{ background: 'transparent', border: 'none', color: '#10B981', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép lời nhắn"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedPaymentMethod === 'zalopay' && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Ví nhận tiền:</span>
+                    <span style={{ fontWeight: 600, color: '#3B82F6' }}>ZaloPay</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Số điện thoại ví:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#fff' }}>{paymentConfig.zalopay.phone}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(paymentConfig.zalopay.phone.replace(/\s+/g, ''), 'Số điện thoại ZaloPay')}
+                        style={{ background: 'transparent', border: 'none', color: '#3B82F6', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép số ZaloPay"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Tên người nhận:</span>
+                    <span style={{ fontWeight: 700, color: '#F59E0B' }}>{paymentConfig.zalopay.accountHolder}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: '#8E8F99' }}>Lời nhắn:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontWeight: 700, color: '#10B981' }}>
+                        {paymentConfig.bank.memoPrefix} {currentUserId.toUpperCase()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(`${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`, 'Lời nhắn')}
+                        style={{ background: 'transparent', border: 'none', color: '#10B981', cursor: 'pointer', padding: '2px' }}
+                        title="Sao chép lời nhắn"
+                      >
+                        <Copy size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedPaymentMethod === 'card' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#8E8F99' }}>Cổng thanh toán:</span>
+                    <span style={{ fontWeight: 700, color: '#10B981' }}>{paymentConfig.card.gatewayName}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#9CA3AF', lineHeight: 1.5 }}>
+                    {paymentConfig.card.instructions}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div style={{ fontSize: '11px', color: '#8E8F99', marginBottom: '14px' }}>
-              Mã QR tự động hết hạn sau: <strong style={{ color: '#F59E0B' }}>{Math.floor(qrCountdown / 60)}:{(qrCountdown % 60).toString().padStart(2, '0')}</strong>
+              Mã giao dịch tự động hết hạn sau: <strong style={{ color: '#F59E0B' }}>{Math.floor(qrCountdown / 60)}:{(qrCountdown % 60).toString().padStart(2, '0')}</strong>
             </div>
 
             <button
