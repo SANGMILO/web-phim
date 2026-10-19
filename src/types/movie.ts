@@ -68,7 +68,7 @@ export interface Movie {
   featured?: boolean;
   trending?: boolean;
   inTheaters?: boolean;
-  /** True only for the bundled catalog shown while Supabase has no published movies. */
+  /** True for bundled catalog entries that do not yet have a published Supabase override. */
   isDemo?: boolean;
 }
 

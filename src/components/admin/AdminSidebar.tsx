@@ -17,6 +17,7 @@ import {
 import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
 import { useReviews } from '@/lib/reviews/useReviews';
 import { useUsers } from '@/lib/users/useUsers';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 interface AdminSidebarProps {
   isOpen: boolean;
@@ -119,7 +120,8 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
             justifyContent: 'space-between',
           }}
         >
-          <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link href="/admin" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <BrandLogo size={26} />
             <span
               className="font-display"
               style={{

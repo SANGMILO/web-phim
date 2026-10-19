@@ -25,6 +25,7 @@ import { toGoogleDriveEmbedUrl, isGoogleDriveUrl } from '@/lib/utils/google-driv
 import { toYouTubeEmbedUrl } from '@/lib/utils/youtube';
 import { useToast } from '@/components/admin/AdminToast';
 import { MovieImage } from '@/components/common/MovieImage';
+import { publishMovieFromAdmin } from '@/app/admin/actions';
 
 interface AiSearchResultCandidate {
   id: number;
@@ -79,6 +80,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
   // ─── Google Drive Test Modal State ────────────────────────────────
   const [showDriveTestModal, setShowDriveTestModal] = useState(false);
   const [driveTestUrl, setDriveTestUrl] = useState('');
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // ─── Core Movie Form State ────────────────────────────────────────
   const [title, setTitle] = useState(initialMovie?.title || '');
@@ -291,7 +293,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
   };
 
   // ─── Form Submit ──────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!title.trim()) {
@@ -383,18 +385,29 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
       episodes: isSeriesType ? structuredSeasons[0]?.episodes : [],
     };
 
-    const res = saveMovie(movieData);
+    setIsPublishing(true);
+    try {
+      const res = saveMovie(movieData);
+      if (!res.success) throw new Error('Không thể lưu dữ liệu cục bộ.');
 
-    if (res.success) {
+      await publishMovieFromAdmin(res.movie);
       showToast(
         isEdit
-          ? `Đã cập nhật tác phẩm "${title}" thành công!`
-          : `Đã xuất bản tác phẩm "${title}" thành công!`,
+          ? `Đã cập nhật và đồng bộ "${title}" lên Supabase!`
+          : `Đã xuất bản "${title}" lên Supabase!`,
         'success'
       );
       router.push('/admin/movies');
-    } else {
-      showToast('Có lỗi xảy ra khi lưu phim.', 'error');
+      router.refresh();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? `Không thể xuất bản lên Supabase: ${error.message}`
+          : 'Không thể xuất bản phim lên Supabase.',
+        'error'
+      );
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -440,6 +453,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="submit"
+            disabled={isPublishing}
             className="btn btn-primary"
             style={{
               padding: '10px 22px',
@@ -451,8 +465,8 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               boxShadow: '0 4px 20px rgba(229, 57, 79, 0.4)',
             }}
           >
-            <Save size={16} />
-            <span>{isEdit ? 'Lưu thay đổi' : 'Xuất bản phim ngay'}</span>
+            {isPublishing ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            <span>{isPublishing ? 'Đang đồng bộ Supabase...' : isEdit ? 'Lưu thay đổi' : 'Xuất bản phim ngay'}</span>
           </button>
         </div>
       </div>

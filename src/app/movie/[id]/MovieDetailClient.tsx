@@ -42,7 +42,11 @@ export function MovieDetailClient({ movie: initialMovie, slugOrId, related }: Mo
     () => null
   );
 
-  const movie = storeMovie || initialMovie;
+  // Published Supabase data is authoritative. Local storage is only a
+  // fallback for bundled/demo entries that have not been published yet.
+  const movie = initialMovie && !initialMovie.isDemo
+    ? initialMovie
+    : storeMovie || initialMovie;
 
   const isInWatchlist = movie ? has(movie.id) : false;
 

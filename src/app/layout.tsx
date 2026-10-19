@@ -6,8 +6,6 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { WatchlistProvider } from "@/components/providers/WatchlistProvider";
 import { AuthProvider } from "@/components/providers/AuthProvider";
-import { DemoModeBanner } from "@/components/common/DemoModeBanner";
-import { movieService } from "@/lib/movies/movie-service";
 
 export const revalidate = 300;
 
@@ -37,6 +35,18 @@ export const metadata: Metadata = {
     template: `%s | ${BRAND.name}`,
   },
   description: BRAND.description,
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' },
+      { url: '/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
   openGraph: {
     title: BRAND.name,
     description: BRAND.description,
@@ -47,8 +57,6 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const catalog = await movieService.getAll();
-  const isDemo = catalog.some((movie) => movie.isDemo);
   return (
     <html lang="vi" className={`${montserrat.variable} ${beVietnamPro.variable}`}>
       <body>
@@ -57,7 +65,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Header />
             <main>{children}</main>
             <Footer />
-            <DemoModeBanner isDemo={isDemo} />
           </WatchlistProvider>
         </AuthProvider>
       </body>

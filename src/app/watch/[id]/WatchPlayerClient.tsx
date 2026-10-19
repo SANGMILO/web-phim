@@ -50,7 +50,10 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     () => null
   );
 
-  const movie = storeMovie || initialMovie;
+  // Never let an older demo/local copy hide a published Supabase source.
+  const movie = initialMovie && !initialMovie.isDemo
+    ? initialMovie
+    : storeMovie || initialMovie;
 
   const isSeries = Boolean(
     movie?.contentType === 'series' ||

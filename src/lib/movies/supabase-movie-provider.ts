@@ -118,6 +118,31 @@ function toMovie(
   };
 }
 
+export function mergePublishedMoviesWithDemo(publishedMovies: Movie[]): Movie[] {
+  const publishedBySlug = new Map(
+    publishedMovies.map((movie) => [movie.slug.toLowerCase(), movie]),
+  );
+
+  const mergedDemo = demoMovies.map((demoMovie) => {
+    const published = publishedBySlug.get(demoMovie.slug.toLowerCase());
+    if (!published) return { ...demoMovie, isDemo: true };
+
+    publishedBySlug.delete(demoMovie.slug.toLowerCase());
+    return {
+      ...demoMovie,
+      ...published,
+      isDemo: false,
+    };
+  });
+
+  const publishedOnly = [...publishedBySlug.values()].map((movie) => ({
+    ...movie,
+    isDemo: false,
+  }));
+
+  return [...publishedOnly, ...mergedDemo];
+}
+
 export class SupabaseMovieProvider implements MovieProvider {
   private async rows(): Promise<Movie[]> {
     const supabase = createPublicClient();
@@ -131,9 +156,7 @@ export class SupabaseMovieProvider implements MovieProvider {
       console.error(`Không thể đọc phim từ Supabase: ${error.message}`);
       return demoMovies.map((movie) => ({ ...movie, isDemo: true }));
     }
-    if (!data?.length) {
-      return demoMovies.map((movie) => ({ ...movie, isDemo: true }));
-    }
+    if (!data?.length) return mergePublishedMoviesWithDemo([]);
     const movieRows = data as MovieRow[];
     const movieIds = movieRows.map((movie) => movie.id);
     const [{ data: sourceData, error: sourceError }, { data: episodeData, error: episodeError }] =
@@ -156,9 +179,10 @@ export class SupabaseMovieProvider implements MovieProvider {
     if (sourceError) console.error(`Không thể đọc nguồn phát: ${sourceError.message}`);
     if (episodeError) console.error(`Không thể đọc tập phim: ${episodeError.message}`);
 
-    return movieRows.map((row) =>
+    const publishedMovies = movieRows.map((row) =>
       toMovie(row, (sourceData as SourceRow[] | null) ?? [], (episodeData as EpisodeRow[] | null) ?? []),
     );
+    return mergePublishedMoviesWithDemo(publishedMovies);
   }
 
   async getFeatured() { return (await this.rows()).filter((m) => m.featured); }

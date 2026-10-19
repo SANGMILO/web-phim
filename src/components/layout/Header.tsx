@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useWatchlist } from '@/components/providers/WatchlistProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { GENRES } from '@/data/demo-movies';
+import { BrandLogo } from '@/components/common/BrandLogo';
 import {
   Search,
   Bookmark,
@@ -104,16 +105,23 @@ export function Header() {
           <Link
             href="/"
             style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
               fontFamily: 'var(--font-display)',
               fontSize: '24px',
               fontWeight: 800,
               letterSpacing: '-0.02em',
               color: 'var(--text-primary)',
               flexShrink: 0,
+              textDecoration: 'none',
             }}
           >
-            <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
-            <span>VERSE</span>
+            <BrandLogo size={32} />
+            <span>
+              <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
+              <span>VERSE</span>
+            </span>
           </Link>
 
           {/* Desktop Nav */}

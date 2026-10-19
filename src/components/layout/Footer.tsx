@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BRAND } from '@/config/brand';
 import { GENRES } from '@/data/demo-movies';
+import { BrandLogo } from '@/components/common/BrandLogo';
 
 const BROWSE_LINKS = [
   { href: '/movies', label: 'Phim lẻ' },
@@ -49,12 +50,18 @@ export function Footer() {
                 fontFamily: 'var(--font-display)',
                 fontSize: '22px',
                 fontWeight: 800,
-                display: 'inline-block',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
                 marginBottom: '12px',
+                textDecoration: 'none',
               }}
             >
-              <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
-              <span>VERSE</span>
+              <BrandLogo size={28} />
+              <span>
+                <span style={{ color: 'var(--accent-crimson)' }}>CINE</span>
+                <span>VERSE</span>
+              </span>
             </Link>
             <p
               style={{
@@ -179,16 +186,13 @@ export function Footer() {
             paddingTop: '24px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'center',
             flexWrap: 'wrap',
             gap: '12px',
           }}
         >
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            © 2024 {BRAND.name}. Đây là dự án demo — không cung cấp nội dung có bản quyền.
-          </p>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Dữ liệu phim mang tính chất minh họa.
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            © 2026 {BRAND.name}
           </p>
         </div>
       </div>

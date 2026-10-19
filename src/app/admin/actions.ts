@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdmin } from '@/lib/supabase/auth';
 import { parseGoogleDriveUrl } from '@/lib/google-drive';
+import type { Movie } from '@/types/movie';
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
@@ -117,6 +118,95 @@ export async function saveMovie(formData: FormData) {
   revalidatePath(`/movie/${payload.slug}`);
   revalidatePath(`/watch/${payload.slug}`);
   redirect(`/admin/database?edit=${movieId}&saved=1`);
+}
+
+/**
+ * Publishes a movie edited in the legacy/local admin UI to Supabase so the
+ * same movie and playback source are available to every visitor.
+ */
+export async function publishMovieFromAdmin(movie: Movie) {
+  const { supabase } = await requireAdmin();
+  const slug = movie.slug.trim().toLowerCase();
+
+  if (!movie.title.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    throw new Error('Tiêu đề hoặc slug không hợp lệ.');
+  }
+  if (!Number.isInteger(movie.year) || movie.year < 1888 || movie.year > 2200) {
+    throw new Error('Năm phát hành không hợp lệ.');
+  }
+  if (!['movie', 'series', 'anime'].includes(movie.contentType)) {
+    throw new Error('Loại phim không hợp lệ.');
+  }
+
+  const payload = {
+    title: movie.title.trim(),
+    slug,
+    description: movie.overview?.trim() ?? '',
+    poster_url: movie.posterUrl?.trim() ?? '',
+    backdrop_url: movie.backdropUrl?.trim() ?? '',
+    release_year: movie.year,
+    release_date: movie.releaseDate || null,
+    content_type: movie.inTheaters ? 'theatrical' : movie.contentType,
+    genres: movie.genres ?? [],
+    status: 'published',
+    original_title: movie.originalTitle?.trim() || null,
+    runtime: movie.runtime ?? null,
+    rating: movie.rating ?? null,
+    trailer_url: movie.trailerUrl?.trim() || null,
+    quality: movie.quality?.trim() || null,
+    language: movie.language?.trim() || null,
+    country: movie.country?.trim() || null,
+    featured: movie.featured ?? false,
+    trending: movie.trending ?? false,
+  };
+
+  const { data: savedMovie, error: movieError } = await supabase
+    .from('movies')
+    .upsert(payload, { onConflict: 'slug' })
+    .select('id,slug')
+    .single();
+  if (movieError || !savedMovie) {
+    throw new Error(movieError?.message || 'Không thể lưu phim lên Supabase.');
+  }
+
+  const { data: existingSource, error: sourceLookupError } = await supabase
+    .from('movie_sources')
+    .select('id')
+    .eq('movie_id', savedMovie.id)
+    .eq('scope', 'movie')
+    .eq('display_order', 0)
+    .maybeSingle();
+  if (sourceLookupError) throw new Error(sourceLookupError.message);
+
+  const driveFileId = parseGoogleDriveUrl(movie.gdriveUrl || movie.playbackUrl || '');
+  if (driveFileId) {
+    await saveDriveSource(
+      supabase,
+      savedMovie.id,
+      driveFileId,
+      existingSource?.id,
+      0,
+      'movie',
+      'active',
+    );
+  } else if (existingSource?.id) {
+    const { error: deleteSourceError } = await supabase
+      .from('movie_sources')
+      .delete()
+      .eq('id', existingSource.id)
+      .eq('movie_id', savedMovie.id)
+      .eq('scope', 'movie');
+    if (deleteSourceError) throw new Error(deleteSourceError.message);
+  }
+
+  revalidatePath('/');
+  revalidatePath('/movies');
+  revalidatePath('/admin');
+  revalidatePath('/admin/movies');
+  revalidatePath(`/movie/${slug}`);
+  revalidatePath(`/watch/${slug}`);
+
+  return { success: true, id: savedMovie.id, slug };
 }
 
 export async function saveEpisode(formData: FormData) {
