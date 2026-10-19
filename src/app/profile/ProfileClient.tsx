@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -29,21 +29,41 @@ import {
   ArrowRight,
   X,
   Copy,
+  Camera,
+  Upload,
+  Clapperboard,
+  Ticket,
+  Popcorn,
+  Disc,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { profileService, type UserProfileData, type WalletTransaction } from '@/lib/profile/profile-service';
 import { useWatchlist } from '@/components/providers/WatchlistProvider';
 
-// Cinema Avatar Presets
-const AVATAR_PRESETS = [
-  { id: 'av-1', label: 'Cyber Pilot', bg: 'linear-gradient(135deg, #E50914, #B81D24)', emoji: '🚀' },
-  { id: 'av-2', label: 'Noir Detective', bg: 'linear-gradient(135deg, #1E3A8A, #3B82F6)', emoji: '🕵️' },
-  { id: 'av-3', label: 'Sci-Fi Jedi', bg: 'linear-gradient(135deg, #059669, #10B981)', emoji: '⚔️' },
-  { id: 'av-4', label: 'Dune Nomad', bg: 'linear-gradient(135deg, #D97706, #F59E0B)', emoji: '🏜️' },
-  { id: 'av-5', label: 'Anime Hero', bg: 'linear-gradient(135deg, #7C3AED, #A855F7)', emoji: '⚡' },
-  { id: 'av-6', label: 'Film Director', bg: 'linear-gradient(135deg, #BE185D, #EC4899)', emoji: '🎬' },
-  { id: 'av-7', label: 'Golden Oscar', bg: 'linear-gradient(135deg, #B45309, #FBBF24)', emoji: '🏆' },
-  { id: 'av-8', label: 'Ghost Rider', bg: 'linear-gradient(135deg, #DC2626, #F97316)', emoji: '🔥' },
+// Authentic Cinema Avatar Presets (Zero AI feel, Studio Monograms & Cinema Tools)
+interface AvatarPreset {
+  id: string;
+  label: string;
+  type: 'monogram' | 'icon';
+  bg: string;
+  icon?: any;
+}
+
+const AVATAR_PRESETS: AvatarPreset[] = [
+  // Monograms on luxury cinema velvet/metallic backgrounds
+  { id: 'mono-ruby', label: 'Chữ cái Ruby', type: 'monogram', bg: 'linear-gradient(135deg, #E50914 0%, #831010 100%)' },
+  { id: 'mono-gold', label: 'Chữ cái Hoàng gia', type: 'monogram', bg: 'linear-gradient(135deg, #B45309 0%, #D97706 100%)' },
+  { id: 'mono-dark', label: 'Chữ cái Titan', type: 'monogram', bg: 'linear-gradient(135deg, #2D3748 0%, #1A202C 100%)' },
+  { id: 'mono-emerald', label: 'Chữ cái Emerald', type: 'monogram', bg: 'linear-gradient(135deg, #065F46 0%, #064E3B 100%)' },
+
+  // Studio Minimalist Vector Icons
+  { id: 'icon-clapper', label: 'Đạo diễn', type: 'icon', bg: 'linear-gradient(135deg, #991B1B 0%, #450A0A 100%)', icon: Clapperboard },
+  { id: 'icon-film', label: 'Cuộn phim', type: 'icon', bg: 'linear-gradient(135deg, #1E3A8A 0%, #0F172A 100%)', icon: Film },
+  { id: 'icon-camera', label: 'Máy quay', type: 'icon', bg: 'linear-gradient(135deg, #374151 0%, #111827 100%)', icon: Camera },
+  { id: 'icon-ticket', label: 'Vé VIP', type: 'icon', bg: 'linear-gradient(135deg, #B45309 0%, #78350F 100%)', icon: Ticket },
+  { id: 'icon-popcorn', label: 'Bỏng ngô rạp', type: 'icon', bg: 'linear-gradient(135deg, #C2410C 0%, #7C2D12 100%)', icon: Popcorn },
+  { id: 'icon-disc', label: 'Đĩa 4K', type: 'icon', bg: 'linear-gradient(135deg, #047857 0%, #022C22 100%)', icon: Disc },
 ];
 
 const GENRE_OPTIONS = [
@@ -67,8 +87,79 @@ const TOP_UP_AMOUNTS = [
   { amount: 1000000, label: '1.000.000 ₫', bonus: '+25% King' },
 ];
 
+// Robust Avatar Renderer
+function renderAvatarBadge(
+  avatarUrl: string | undefined,
+  name: string,
+  size = 84,
+  fontSize = 32
+) {
+  // If user uploaded a personal photo or passed an image URL
+  if (avatarUrl && (avatarUrl.startsWith('data:image/') || avatarUrl.startsWith('http'))) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={name}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          display: 'block',
+        }}
+      />
+    );
+  }
+
+  const preset = AVATAR_PRESETS.find((p) => p.id === avatarUrl) || AVATAR_PRESETS[0];
+
+  if (preset.type === 'icon' && preset.icon) {
+    const IconComponent = preset.icon;
+    return (
+      <div
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          borderRadius: '50%',
+          background: preset.bg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#fff',
+        }}
+      >
+        <IconComponent size={Math.round(size * 0.44)} />
+      </div>
+    );
+  }
+
+  // Monogram Initial
+  const initial = (name || 'U').charAt(0).toUpperCase();
+  return (
+    <div
+      style={{
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '50%',
+        background: preset.bg || 'linear-gradient(135deg, #E50914, #831010)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff',
+        fontWeight: 800,
+        fontSize: `${fontSize}px`,
+        textTransform: 'uppercase',
+        letterSpacing: '-0.5px',
+      }}
+    >
+      {initial}
+    </div>
+  );
+}
+
 export function ProfileClient() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, updateUser, updatePassword, loginDemo } = useAuth();
   const { count: watchlistCount } = useWatchlist();
 
@@ -84,9 +175,27 @@ export function ProfileClient() {
   const [displayName, setDisplayName] = useState(user?.name || profile.displayName || 'user 1');
   const [phone, setPhone] = useState(profile.phone || '');
   const [bio, setBio] = useState(profile.bio || '');
-  const [selectedAvatar, setSelectedAvatar] = useState(profile.avatarUrl || 'av-1');
+  const [selectedAvatar, setSelectedAvatar] = useState(profile.avatarUrl || 'mono-ruby');
   const [selectedGenres, setSelectedGenres] = useState<string[]>(profile.favoriteGenres || ['Hành động']);
   const [infoToast, setInfoToast] = useState<string | null>(null);
+
+  // Form states - Password
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [passError, setPassError] = useState<string | null>(null);
+  const [passToast, setPassToast] = useState<string | null>(null);
+
+  // Form states - Top up
+  const [selectedAmount, setSelectedAmount] = useState<number>(100000);
+  const [customAmount, setCustomAmount] = useState<string>('');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'vietqr' | 'momo' | 'zalopay' | 'card'>('vietqr');
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [qrCountdown, setQrCountdown] = useState<number>(900); // 15 mins in sec
+  const [walletToast, setWalletToast] = useState<string | null>(null);
 
   // Keep profile in sync safely
   useEffect(() => {
@@ -109,24 +218,6 @@ export function ProfileClient() {
     return unsubscribe;
   }, [currentUserId, user?.name, user?.email]);
 
-  // Form states - Password
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showOldPass, setShowOldPass] = useState(false);
-  const [showNewPass, setShowNewPass] = useState(false);
-  const [showConfirmPass, setShowConfirmPass] = useState(false);
-  const [passError, setPassError] = useState<string | null>(null);
-  const [passToast, setPassToast] = useState<string | null>(null);
-
-  // Form states - Top up
-  const [selectedAmount, setSelectedAmount] = useState<number>(100000);
-  const [customAmount, setCustomAmount] = useState<string>('');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'vietqr' | 'momo' | 'zalopay' | 'card'>('vietqr');
-  const [showQrModal, setShowQrModal] = useState<boolean>(false);
-  const [qrCountdown, setQrCountdown] = useState<number>(900); // 15 mins in sec
-  const [walletToast, setWalletToast] = useState<string | null>(null);
-
   // QR Countdown timer
   useEffect(() => {
     if (!showQrModal) return;
@@ -135,6 +226,68 @@ export function ProfileClient() {
     }, 1000);
     return () => clearInterval(interval);
   }, [showQrModal]);
+
+  // Handle Photo Upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Vui lòng chọn file hình ảnh hợp lệ (JPG, PNG, WEBP).');
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Dung lượng ảnh tối đa là 8MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 360;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+          setSelectedAvatar(dataUrl);
+          profileService.updateProfile(currentUserId, { avatarUrl: dataUrl });
+          updateUser({ avatarUrl: dataUrl });
+          setInfoToast('Tải ảnh đại diện cá nhân thành công!');
+          setTimeout(() => setInfoToast(null), 3500);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveCustomAvatar = () => {
+    setSelectedAvatar('mono-ruby');
+    profileService.updateProfile(currentUserId, { avatarUrl: 'mono-ruby' });
+    updateUser({ avatarUrl: 'mono-ruby' });
+    setInfoToast('Đã đặt lại về Avatar điện ảnh hệ thống.');
+    setTimeout(() => setInfoToast(null), 3000);
+  };
 
   // Handle Save Info
   const handleSaveInfo = (e: React.FormEvent) => {
@@ -242,16 +395,18 @@ export function ProfileClient() {
   };
   const passStrength = getPasswordStrength(newPassword);
 
+  const isCustomPhoto = selectedAvatar && (selectedAvatar.startsWith('data:image/') || selectedAvatar.startsWith('http'));
+
   // If user is not logged in:
   if (!isAuthenticated && !user) {
     return (
       <div
         style={{
-          minHeight: '80vh',
+          minHeight: '85vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '24px',
+          padding: '120px 24px 60px 24px',
           background: 'var(--bg-primary, #08090C)',
         }}
       >
@@ -331,8 +486,6 @@ export function ProfileClient() {
     );
   }
 
-  const activeAvatarObj = AVATAR_PRESETS.find((a) => a.id === selectedAvatar) || AVATAR_PRESETS[0];
-
   return (
     <div
       style={{
@@ -342,12 +495,24 @@ export function ProfileClient() {
         paddingBottom: '80px',
       }}
     >
-      {/* Hero Banner Header */}
+      {/* Hidden file upload input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/*"
+        onChange={handleImageUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* Hero Banner Header - Fixed top spacing so it sits below fixed header */}
       <section
         style={{
           position: 'relative',
-          padding: 'clamp(32px, 5vw, 60px) clamp(16px, 4vw, 48px) 32px clamp(16px, 4vw, 48px)',
-          background: 'linear-gradient(180deg, rgba(229, 9, 20, 0.12) 0%, rgba(8, 9, 12, 1) 100%)',
+          paddingTop: 'clamp(96px, 10vw, 120px)',
+          paddingBottom: '36px',
+          paddingLeft: 'clamp(16px, 4vw, 48px)',
+          paddingRight: 'clamp(16px, 4vw, 48px)',
+          background: 'linear-gradient(180deg, rgba(229, 9, 20, 0.14) 0%, rgba(8, 9, 12, 1) 100%)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
@@ -366,21 +531,44 @@ export function ProfileClient() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             <div
               style={{
-                width: '84px',
-                height: '84px',
+                position: 'relative',
+                width: '86px',
+                height: '86px',
                 borderRadius: '50%',
-                background: activeAvatarObj.bg,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '36px',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 20px rgba(229, 9, 20, 0.25)',
                 border: '3px solid rgba(255, 255, 255, 0.15)',
-                position: 'relative',
+                flexShrink: 0,
               }}
             >
-              <span>{activeAvatarObj.emoji}</span>
-              {profile.isVip && (
+              {renderAvatarBadge(selectedAvatar || profile?.avatarUrl, profile?.displayName || user?.name || 'U', 86, 32)}
+
+              {/* Upload image button overlay */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  left: '-2px',
+                  background: '#1F2937',
+                  border: '2px solid #08090C',
+                  color: '#fff',
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.5)',
+                  transition: 'background 0.2s',
+                }}
+                title="Tải ảnh đại diện từ thiết bị"
+              >
+                <Camera size={14} />
+              </button>
+
+              {profile?.isVip && (
                 <div
                   style={{
                     position: 'absolute',
@@ -406,9 +594,9 @@ export function ProfileClient() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                 <h1 style={{ fontSize: 'clamp(22px, 3.5vw, 30px)', fontWeight: 800, margin: 0 }}>
-                  {profile.displayName || user?.name}
+                  {profile?.displayName || user?.name}
                 </h1>
-                {profile.isVip ? (
+                {profile?.isVip ? (
                   <span
                     style={{
                       background: 'linear-gradient(135deg, #F59E0B, #D97706)',
@@ -442,10 +630,10 @@ export function ProfileClient() {
               </div>
 
               <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary, #8E8F99)', fontSize: '13px' }}>
-                {user?.email || profile.email} • Thành viên từ {new Date(user?.createdAt || Date.now()).getFullYear()}
+                {user?.email || profile?.email} • Thành viên từ {new Date(user?.createdAt || Date.now()).getFullYear()}
               </p>
 
-              {profile.isVip && (
+              {profile?.isVip && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', color: '#FBBF24' }}>
                   <Sparkles size={13} />
                   <span>Quyền lợi: Xem 4K Ultra HD, Âm thanh vòm Dolby Atmos, Không quảng cáo</span>
@@ -683,7 +871,7 @@ export function ProfileClient() {
                   <Mail size={16} color="#8E8F99" style={{ position: 'absolute', left: '12px', top: '13px' }} />
                   <input
                     type="email"
-                    value={user?.email || profile.email}
+                    value={user?.email || profile?.email}
                     disabled
                     style={{
                       width: '100%',
@@ -769,9 +957,9 @@ export function ProfileClient() {
               </button>
             </form>
 
-            {/* Right: Avatar Picker & Genres */}
+            {/* Right: Avatar System (Photo Upload + Cinema Presets) */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              {/* Avatar Presets */}
+              {/* Custom Photo Upload Card */}
               <div
                 style={{
                   background: 'rgba(23, 25, 32, 0.8)',
@@ -780,38 +968,222 @@ export function ProfileClient() {
                   padding: '24px',
                 }}
               >
-                <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 14px 0', color: '#fff' }}>
-                  Bộ sưu tập Avatar Điện Ảnh
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Camera size={18} color="#E50914" /> Ảnh đại diện cá nhân
+                  </h4>
+                  {isCustomPhoto && (
+                    <span style={{ fontSize: '11px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                      Đang dùng ảnh tự chọn
+                    </span>
+                  )}
+                </div>
+
+                {isCustomPhoto ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                      padding: '16px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                    }}
+                  >
+                    <img
+                      src={selectedAvatar}
+                      alt="Avatar Preview"
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        border: '2px solid #E50914',
+                        boxShadow: '0 4px 14px rgba(0, 0, 0, 0.4)',
+                      }}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+                        Ảnh cá nhân của bạn
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(255, 255, 255, 0.15)',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Đổi ảnh khác
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleRemoveCustomAvatar}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            borderRadius: '6px',
+                            color: '#EF4444',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Trash2 size={13} /> Xóa ảnh
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{
+                      padding: '24px 16px',
+                      borderRadius: '12px',
+                      border: '2px dashed rgba(255, 255, 255, 0.15)',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(229, 9, 20, 0.5)';
+                      e.currentTarget.style.background = 'rgba(229, 9, 20, 0.04)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '44px',
+                        height: '44px',
+                        borderRadius: '50%',
+                        background: 'rgba(229, 9, 20, 0.15)',
+                        color: '#E50914',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 10px auto',
+                      }}
+                    >
+                      <Upload size={20} />
+                    </div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+                      Tải ảnh từ máy tính hoặc điện thoại
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#8E8F99' }}>
+                      Hỗ trợ JPG, PNG, WEBP (Tự động căn chỉnh & tối ưu tỷ lệ tròn)
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Authentic Cinema Presets (Zero AI feel) */}
+              <div
+                style={{
+                  background: 'rgba(23, 25, 32, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '16px',
+                  padding: '24px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#fff' }}>
+                    Hoặc chọn Avatar Điện Ảnh chuẩn
+                  </h4>
+                  <span style={{ fontSize: '11px', color: '#8E8F99' }}>
+                    Biểu tượng & Chữ cái cao cấp
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
                   {AVATAR_PRESETS.map((item) => {
                     const isSelected = selectedAvatar === item.id;
+                    const initial = (displayName || user?.name || 'U').charAt(0).toUpperCase();
+                    const IconComp = item.icon;
+
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => setSelectedAvatar(item.id)}
+                        onClick={() => {
+                          setSelectedAvatar(item.id);
+                          profileService.updateProfile(currentUserId, { avatarUrl: item.id });
+                          updateUser({ avatarUrl: item.id });
+                        }}
                         style={{
                           background: item.bg,
-                          border: isSelected ? '3px solid #F59E0B' : '2px solid rgba(255, 255, 255, 0.1)',
+                          border: isSelected ? '3px solid #F59E0B' : '1.5px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '12px',
                           aspectRatio: '1',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '26px',
                           cursor: 'pointer',
                           boxShadow: isSelected ? '0 0 16px rgba(245, 158, 11, 0.5)' : 'none',
                           transform: isSelected ? 'scale(1.05)' : 'scale(1)',
                           transition: 'all 0.15s ease',
                           padding: '4px',
+                          position: 'relative',
                         }}
+                        title={item.label}
                       >
-                        <span>{item.emoji}</span>
-                        <span style={{ fontSize: '9px', color: '#fff', fontWeight: 700, marginTop: '2px', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
+                        {item.type === 'monogram' ? (
+                          <span style={{ fontSize: '20px', fontWeight: 800, color: '#fff', textTransform: 'uppercase' }}>
+                            {initial}
+                          </span>
+                        ) : (
+                          <IconComp size={20} color="#fff" />
+                        )}
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            color: 'rgba(255, 255, 255, 0.85)',
+                            fontWeight: 600,
+                            marginTop: '3px',
+                            textAlign: 'center',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            width: '100%',
+                          }}
+                        >
                           {item.label}
                         </span>
+                        {isSelected && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              top: '3px',
+                              right: '3px',
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              background: '#F59E0B',
+                              color: '#08090C',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Check size={10} strokeWidth={3} />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -1658,10 +2030,8 @@ export function ProfileClient() {
                 boxShadow: '0 8px 30px rgba(0, 0, 0, 0.5)',
               }}
             >
-              {/* Dynamic QR SVG */}
               <svg viewBox="0 0 100 100" width="100%" height="100%">
                 <rect width="100" height="100" fill="#fff" />
-                {/* QR corner patterns */}
                 <rect x="10" y="10" width="24" height="24" fill="#000" rx="3" />
                 <rect x="14" y="14" width="16" height="16" fill="#fff" rx="2" />
                 <rect x="18" y="18" width="8" height="8" fill="#000" rx="1" />
@@ -1674,7 +2044,6 @@ export function ProfileClient() {
                 <rect x="14" y="70" width="16" height="16" fill="#fff" rx="2" />
                 <rect x="18" y="74" width="8" height="8" fill="#000" rx="1" />
 
-                {/* Decorative data matrix */}
                 <rect x="42" y="12" width="6" height="6" fill="#E50914" />
                 <rect x="52" y="12" width="6" height="6" fill="#000" />
                 <rect x="42" y="24" width="6" height="6" fill="#000" />

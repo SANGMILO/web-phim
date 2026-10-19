@@ -302,6 +302,7 @@ export function Header() {
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
+                      overflow: 'hidden',
                       background: 'var(--accent-crimson)',
                       color: 'white',
                       display: 'flex',
@@ -309,9 +310,18 @@ export function Header() {
                       justifyContent: 'center',
                       fontWeight: 700,
                       fontSize: '12px',
+                      flexShrink: 0,
                     }}
                   >
-                    {user.name.charAt(0).toUpperCase()}
+                    {user.avatarUrl && (user.avatarUrl.startsWith('data:image/') || user.avatarUrl.startsWith('http')) ? (
+                      <img
+                        src={user.avatarUrl}
+                        alt={user.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <span
                     style={{
@@ -368,18 +378,48 @@ export function Header() {
                           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                          <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-                            {user.name}
-                          </p>
-                          <span style={{ fontSize: '10px', color: '#F59E0B', fontWeight: 700, background: 'rgba(245, 158, 11, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
-                            VIP
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              overflow: 'hidden',
+                              background: 'var(--accent-crimson)',
+                              color: 'white',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '14px',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {user.avatarUrl && (user.avatarUrl.startsWith('data:image/') || user.avatarUrl.startsWith('http')) ? (
+                              <img
+                                src={user.avatarUrl}
+                                alt={user.name}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              user.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {user.name}
+                              </p>
+                              <span style={{ fontSize: '10px', color: '#F59E0B', fontWeight: 700, background: 'rgba(245, 158, 11, 0.15)', padding: '2px 6px', borderRadius: '4px', flexShrink: 0 }}>
+                                VIP
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0 0' }}>
+                              {user.email}
+                            </p>
+                          </div>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', margin: '2px 0 0 0' }}>
-                          {user.email}
-                        </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent-crimson)', marginTop: '6px', fontWeight: 600 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent-crimson)', marginTop: '8px', fontWeight: 600 }}>
                           <span>Hồ sơ & Đổi mật khẩu</span> →
                         </div>
                       </Link>
