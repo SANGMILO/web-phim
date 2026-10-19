@@ -1,4 +1,4 @@
-import type { Review, ReviewStatus, MovieRatingStats } from '@/types/review';
+import type { Review, ReviewReply, ReviewStatus, MovieRatingStats } from '@/types/review';
 
 const STORAGE_KEY = 'cineverse_reviews_db';
 const CHANGE_EVENT = 'cineverse_reviews_changed';
@@ -18,6 +18,18 @@ const SEED_REVIEWS: Review[] = [
     hasSpoiler: false,
     createdAt: new Date(Date.now() - 3600000 * 5).toISOString(), // 5 hours ago
     status: 'approved',
+    replies: [
+      {
+        id: 'reply-1',
+        reviewId: 'rev-1',
+        userId: 'user-demo-2',
+        userName: 'Thanh Hà',
+        content: 'Đồng ý với bạn, đoạn sa mạc âm thanh rung cả ghế rạp luôn!',
+        createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+        likes: 3,
+        likedBy: [],
+      },
+    ],
   },
   {
     id: 'rev-2',
@@ -248,6 +260,80 @@ export const reviewService = {
         likedBy: [...likedBy, userId],
       };
     }
+
+    saveToStorage(all);
+    return !isLiked;
+  },
+
+  addReply(
+    reviewId: string,
+    data: {
+      userId: string;
+      userName: string;
+      userAvatar?: string;
+      content: string;
+    }
+  ): ReviewReply | null {
+    const all = [...this.getAllReviews()];
+    const index = all.findIndex((r) => r.id === reviewId);
+    if (index === -1) return null;
+
+    const newReply: ReviewReply = {
+      id: `reply-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      reviewId,
+      userId: data.userId || 'guest',
+      userName: data.userName.trim() || 'Khán giả CineVerse',
+      userAvatar: data.userAvatar,
+      content: data.content.trim(),
+      createdAt: new Date().toISOString(),
+      likes: 0,
+      likedBy: [],
+    };
+
+    const currentReview = all[index];
+    const existingReplies = currentReview.replies || [];
+    all[index] = {
+      ...currentReview,
+      replies: [...existingReplies, newReply],
+    };
+
+    saveToStorage(all);
+    return newReply;
+  },
+
+  toggleReplyLike(reviewId: string, replyId: string, userId = 'user-current'): boolean {
+    const all = [...this.getAllReviews()];
+    const revIndex = all.findIndex((r) => r.id === reviewId);
+    if (revIndex === -1) return false;
+
+    const review = all[revIndex];
+    const replies = review.replies || [];
+    const repIndex = replies.findIndex((rep) => rep.id === replyId);
+    if (repIndex === -1) return false;
+
+    const reply = replies[repIndex];
+    const likedBy = reply.likedBy || [];
+    const isLiked = likedBy.includes(userId);
+
+    const updatedReplies = [...replies];
+    if (isLiked) {
+      updatedReplies[repIndex] = {
+        ...reply,
+        likes: Math.max(0, (reply.likes || 0) - 1),
+        likedBy: likedBy.filter((id) => id !== userId),
+      };
+    } else {
+      updatedReplies[repIndex] = {
+        ...reply,
+        likes: (reply.likes || 0) + 1,
+        likedBy: [...likedBy, userId],
+      };
+    }
+
+    all[revIndex] = {
+      ...review,
+      replies: updatedReplies,
+    };
 
     saveToStorage(all);
     return !isLiked;

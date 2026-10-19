@@ -14,6 +14,9 @@ import {
   Sparkles,
   ShieldAlert,
   User as UserIcon,
+  Check,
+  CornerDownRight,
+  X,
 } from 'lucide-react';
 import { useReviews } from '@/lib/reviews/useReviews';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -56,7 +59,7 @@ function formatRelativeTime(isoString: string): string {
 export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
   const pathname = usePathname();
   const loginUrl = `/login?redirect=${encodeURIComponent(pathname || '/')}`;
-  const { movieReviews, stats, addReview, toggleLike } = useReviews(movieId);
+  const { movieReviews, stats, addReview, toggleLike, addReply, toggleReplyLike } = useReviews(movieId);
   const { user, isAuthenticated } = useAuth();
 
   // Review Form State
@@ -68,6 +71,48 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
   const [sortBy, setSortBy] = useState<'newest' | 'highest' | 'likes'>('newest');
   const [unmaskedSpoilers, setUnmaskedSpoilers] = useState<Record<string, boolean>>({});
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  // Reply State
+  const [activeReplyReviewId, setActiveReplyReviewId] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState<string>('');
+  const [replyGuestName, setReplyGuestName] = useState<string>('');
+  const [replySubmitting, setReplySubmitting] = useState<boolean>(false);
+
+  const handleToggleReplyBox = (reviewId: string) => {
+    if (activeReplyReviewId === reviewId) {
+      setActiveReplyReviewId(null);
+      setReplyContent('');
+      setReplyGuestName('');
+    } else {
+      setActiveReplyReviewId(reviewId);
+      setReplyContent('');
+      setReplyGuestName('');
+    }
+  };
+
+  const handleSubmitReply = (reviewId: string) => {
+    if (replyContent.trim().length < 2) {
+      alert('Vui lòng nhập nội dung câu trả lời ít nhất 2 ký tự.');
+      return;
+    }
+
+    setReplySubmitting(true);
+    const replierName = isAuthenticated && user ? user.name : (replyGuestName.trim() || 'Khán giả CineVerse');
+    const replierId = isAuthenticated && user ? user.id : 'guest-' + Date.now();
+    const replierAvatar = user?.avatarUrl;
+
+    addReply(reviewId, {
+      userId: replierId,
+      userName: replierName,
+      userAvatar: replierAvatar,
+      content: replyContent.trim(),
+    });
+
+    setReplySubmitting(false);
+    setReplyContent('');
+    setReplyGuestName('');
+    setActiveReplyReviewId(null);
+  };
 
   // Sorting
   const sortedReviews = useMemo(() => {
@@ -470,22 +515,65 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <label
             style={{
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '10px',
               cursor: 'pointer',
-              fontSize: '13px',
-              color: hasSpoiler ? '#F59E0B' : '#8E8F99',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              background: hasSpoiler ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255, 255, 255, 0.03)',
+              border: hasSpoiler ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: hasSpoiler ? '0 0 16px rgba(245, 158, 11, 0.15)' : 'none',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              userSelect: 'none',
             }}
           >
             <input
               type="checkbox"
               checked={hasSpoiler}
               onChange={(e) => setHasSpoiler(e.target.checked)}
-              style={{ cursor: 'pointer', accentColor: '#F59E0B', width: '16px', height: '16px' }}
+              style={{
+                position: 'absolute',
+                opacity: 0,
+                width: 0,
+                height: 0,
+                pointerEvents: 'none',
+              }}
             />
-            <AlertTriangle size={15} />
-            <span>Nội dung có tiết lộ cốt truyện (Spoiler)</span>
+            <div
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: hasSpoiler
+                  ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                  : 'rgba(255, 255, 255, 0.05)',
+                border: hasSpoiler
+                  ? '1.5px solid #F59E0B'
+                  : '1.5px solid rgba(255, 255, 255, 0.25)',
+                boxShadow: hasSpoiler
+                  ? '0 0 10px rgba(245, 158, 11, 0.4)'
+                  : 'none',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                flexShrink: 0,
+              }}
+            >
+              {hasSpoiler && <Check size={13} strokeWidth={3} color="#08090C" />}
+            </div>
+            <AlertTriangle size={15} color={hasSpoiler ? '#F59E0B' : '#8E8F99'} />
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: hasSpoiler ? 600 : 500,
+                color: hasSpoiler ? '#FBBF24' : '#9CA3AF',
+                transition: 'color 0.2s ease',
+              }}
+            >
+              Nội dung có tiết lộ cốt truyện (Spoiler)
+            </span>
           </label>
 
           <button
@@ -726,8 +814,41 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
                   </div>
                 )}
 
-                {/* Bottom actions: Like Button */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: '10px' }}>
+                {/* Bottom actions: Reply & Like Buttons */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginTop: '12px',
+                    paddingTop: '10px',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReplyBox(rev.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      background: activeReplyReviewId === rev.id ? 'rgba(229, 9, 20, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                      border: activeReplyReviewId === rev.id ? '1px solid rgba(229, 9, 20, 0.4)' : '1px solid rgba(255, 255, 255, 0.08)',
+                      color: activeReplyReviewId === rev.id ? '#FF5252' : '#8E8F99',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <CornerDownRight size={13} />
+                    <span>
+                      Trả lời {rev.replies && rev.replies.length > 0 ? `(${rev.replies.length})` : ''}
+                    </span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => toggleLike(rev.id, user ? user.id : 'user-client')}
@@ -738,7 +859,7 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
                       padding: '6px 12px',
                       borderRadius: '6px',
                       background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       color: rev.likes > 0 ? '#E50914' : '#8E8F99',
                       fontSize: '12px',
                       fontWeight: 600,
@@ -750,6 +871,233 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
                     <span>Hữu ích ({rev.likes})</span>
                   </button>
                 </div>
+
+                {/* Nested Replies List */}
+                {rev.replies && rev.replies.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: '14px',
+                      paddingLeft: '14px',
+                      borderLeft: '2px solid rgba(229, 9, 20, 0.3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                    }}
+                  >
+                    {rev.replies.map((reply) => {
+                      const replyInitial = (reply.userName || 'K').charAt(0).toUpperCase();
+                      const isReplyLiked = user ? reply.likedBy?.includes(user.id) : false;
+                      return (
+                        <div
+                          key={reply.id}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            borderRadius: '8px',
+                            padding: '10px 14px',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                              marginBottom: '6px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <div
+                                style={{
+                                  width: '24px',
+                                  height: '24px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, #E50914, #B81D24)',
+                                  color: '#fff',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {replyInitial}
+                              </div>
+                              <span style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>
+                                {reply.userName}
+                              </span>
+                              {reply.userId.startsWith('user-') && (
+                                <span
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: 700,
+                                    padding: '1px 6px',
+                                    borderRadius: '4px',
+                                    background: 'rgba(245, 158, 11, 0.15)',
+                                    color: '#F59E0B',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                                  }}
+                                >
+                                  MEMBER
+                                </span>
+                              )}
+                              <span style={{ fontSize: '11px', color: '#8E8F99' }}>
+                                {formatRelativeTime(reply.createdAt)}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => toggleReplyLike(rev.id, reply.id, user ? user.id : 'user-client')}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                background: 'none',
+                                border: 'none',
+                                color: (reply.likes || 0) > 0 || isReplyLiked ? '#E50914' : '#6B7280',
+                                fontSize: '11px',
+                                cursor: 'pointer',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                              }}
+                              title="Thích câu trả lời này"
+                            >
+                              <ThumbsUp size={11} fill={(reply.likes || 0) > 0 || isReplyLiked ? '#E50914' : 'transparent'} />
+                              <span>{reply.likes || 0}</span>
+                            </button>
+                          </div>
+
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: '13px',
+                              color: 'rgba(255, 255, 255, 0.85)',
+                              lineHeight: 1.5,
+                              whiteSpace: 'pre-wrap',
+                            }}
+                          >
+                            {reply.content}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Inline Reply Form */}
+                {activeReplyReviewId === rev.id && (
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '14px',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(229, 9, 20, 0.3)',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      <span style={{ fontSize: '12px', color: '#8E8F99', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <CornerDownRight size={13} color="#E50914" />
+                        Trả lời bình luận của <strong style={{ color: '#fff' }}>@{rev.userName}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveReplyReviewId(null)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#8E8F99',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                        title="Đóng khung trả lời"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+
+                    {!isAuthenticated && (
+                      <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          value={replyGuestName}
+                          onChange={(e) => setReplyGuestName(e.target.value)}
+                          placeholder="Tên của bạn..."
+                          style={{
+                            padding: '6px 10px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.12)',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            fontSize: '12px',
+                            outline: 'none',
+                            width: '160px',
+                          }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#6B7280' }}>
+                          hoặc{' '}
+                          <Link href={loginUrl} style={{ color: '#F59E0B', textDecoration: 'underline' }}>
+                            Đăng nhập
+                          </Link>
+                        </span>
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <textarea
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        placeholder={`Viết câu trả lời cho @${rev.userName}...`}
+                        rows={2}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '8px',
+                          color: '#fff',
+                          fontSize: '13px',
+                          lineHeight: 1.5,
+                          resize: 'vertical',
+                          outline: 'none',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSubmitReply(rev.id)}
+                        disabled={replySubmitting || replyContent.trim().length === 0}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          background: replyContent.trim().length > 0 ? '#E50914' : 'rgba(255, 255, 255, 0.1)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: replyContent.trim().length > 0 ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.15s ease',
+                          height: '38px',
+                        }}
+                      >
+                        <Send size={13} />
+                        Gửi
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })

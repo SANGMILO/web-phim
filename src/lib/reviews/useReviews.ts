@@ -39,6 +39,8 @@ export function useReviews(movieId?: string) {
     stats,
     addReview: reviewService.addReview.bind(reviewService),
     toggleLike: reviewService.toggleLike.bind(reviewService),
+    addReply: reviewService.addReply.bind(reviewService),
+    toggleReplyLike: reviewService.toggleReplyLike.bind(reviewService),
     updateStatus: reviewService.updateStatus.bind(reviewService),
     deleteReview: reviewService.deleteReview.bind(reviewService),
   };

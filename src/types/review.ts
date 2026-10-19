@@ -1,5 +1,17 @@
 export type ReviewStatus = 'approved' | 'hidden';
 
+export interface ReviewReply {
+  id: string;
+  reviewId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string; // ISO date
+  likes?: number;
+  likedBy?: string[];
+}
+
 export interface Review {
   id: string;
   movieId: string;
@@ -14,6 +26,7 @@ export interface Review {
   likedBy?: string[];
   createdAt: string; // ISO date
   status: ReviewStatus;
+  replies?: ReviewReply[];
 }
 
 export interface MovieRatingStats {
