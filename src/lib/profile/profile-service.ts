@@ -35,11 +35,11 @@ const DEFAULT_PROFILE: UserProfileData = {
   userId: 'user-demo-1',
   displayName: 'user 1',
   email: 'xuandongtk@gmail.com',
-  avatarUrl: '',
+  avatarUrl: 'av-1',
   bio: 'Người yêu điện ảnh đích thực. Thích trải nghiệm âm thanh vòm và hình ảnh 4K HDR.',
   phone: '0988 123 456',
   favoriteGenres: ['Hành động', 'Khoa học viễn tưởng', 'Phiêu lưu'],
-  balance: 150000, // 150,000 VND
+  balance: 150000,
   isVip: true,
   vipExpiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
   transactions: [
@@ -73,26 +73,36 @@ const DEFAULT_PROFILE: UserProfileData = {
   ],
 };
 
-function loadStorage(): Record<string, UserProfileData> {
-  if (!isBrowser()) return { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
+let memoryStore: Record<string, UserProfileData> | null = null;
+
+function getStore(): Record<string, UserProfileData> {
+  if (memoryStore) return memoryStore;
+  if (!isBrowser()) {
+    memoryStore = { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
+    return memoryStore;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      const initial = { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-      return initial;
+    if (raw) {
+      memoryStore = JSON.parse(raw);
+    } else {
+      memoryStore = { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(memoryStore));
     }
-    return JSON.parse(raw);
   } catch {
-    return { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
+    memoryStore = { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
   }
+  return memoryStore || { [DEFAULT_PROFILE.userId]: DEFAULT_PROFILE };
 }
 
-function saveStorage(data: Record<string, UserProfileData>) {
+function persistStore(data: Record<string, UserProfileData>, emit = true) {
+  memoryStore = data;
   if (!isBrowser()) return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    if (emit) {
+      window.dispatchEvent(new CustomEvent(CHANGE_EVENT));
+    }
   } catch (err) {
     console.error('Error saving profile data:', err);
   }
@@ -100,28 +110,27 @@ function saveStorage(data: Record<string, UserProfileData>) {
 
 export const profileService = {
   getProfile(userId: string, defaultName?: string, defaultEmail?: string): UserProfileData {
-    const map = loadStorage();
-    if (map[userId]) {
-      return map[userId];
+    const store = getStore();
+    if (store[userId]) {
+      return store[userId];
     }
 
-    // Initialize profile for user
     const newProfile: UserProfileData = {
       userId,
       displayName: defaultName || 'user 1',
       email: defaultEmail || 'xuandongtk@gmail.com',
-      avatarUrl: '',
+      avatarUrl: 'av-1',
       bio: 'Thành viên CineVerse',
       phone: '',
       favoriteGenres: ['Hành động', 'Khoa học viễn tưởng'],
-      balance: 100000,
+      balance: 150000,
       isVip: true,
       vipExpiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
       transactions: [
         {
-          id: `tx-${Date.now()}`,
+          id: `tx-init-${Date.now()}`,
           type: 'topup',
-          amount: 100000,
+          amount: 150000,
           description: 'Quà tặng chào mừng thành viên mới',
           createdAt: new Date().toISOString(),
           status: 'success',
@@ -129,27 +138,28 @@ export const profileService = {
         },
       ],
     };
-    map[userId] = newProfile;
-    saveStorage(map);
+
+    store[userId] = newProfile;
+    persistStore(store, false);
     return newProfile;
   },
 
   updateProfile(userId: string, updates: Partial<UserProfileData>): UserProfileData {
-    const map = loadStorage();
-    const current = map[userId] || this.getProfile(userId);
-    const updated = {
+    const store = getStore();
+    const current = store[userId] || this.getProfile(userId);
+    const updated: UserProfileData = {
       ...current,
       ...updates,
       userId,
     };
-    map[userId] = updated;
-    saveStorage(map);
+    store[userId] = updated;
+    persistStore(store, true);
     return updated;
   },
 
   topUp(userId: string, amount: number, method = 'VietQR'): UserProfileData {
-    const map = loadStorage();
-    const current = map[userId] || this.getProfile(userId);
+    const store = getStore();
+    const current = store[userId] || this.getProfile(userId);
     const newTransaction: WalletTransaction = {
       id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       type: 'topup',
@@ -162,11 +172,11 @@ export const profileService = {
 
     const updated: UserProfileData = {
       ...current,
-      balance: current.balance + amount,
-      transactions: [newTransaction, ...current.transactions],
+      balance: (current.balance || 0) + amount,
+      transactions: [newTransaction, ...(current.transactions || [])],
     };
-    map[userId] = updated;
-    saveStorage(map);
+    store[userId] = updated;
+    persistStore(store, true);
     return updated;
   },
 
@@ -174,16 +184,16 @@ export const profileService = {
     userId: string,
     plan: 'vip_month' | 'vip_year'
   ): { success: boolean; error?: string; profile: UserProfileData } {
-    const map = loadStorage();
-    const current = map[userId] || this.getProfile(userId);
+    const store = getStore();
+    const current = store[userId] || this.getProfile(userId);
     const cost = plan === 'vip_month' ? 59000 : 590000;
     const durationDays = plan === 'vip_month' ? 30 : 365;
     const planName = plan === 'vip_month' ? 'VIP Tháng (30 ngày)' : 'VIP Năm (365 ngày)';
 
-    if (current.balance < cost) {
+    if ((current.balance || 0) < cost) {
       return {
         success: false,
-        error: `Số dư không đủ (${current.balance.toLocaleString('vi-VN')} ₫). Cần ${cost.toLocaleString('vi-VN')} ₫. Vui lòng nạp thêm tiền.`,
+        error: `Số dư không đủ (${(current.balance || 0).toLocaleString('vi-VN')} ₫). Cần ${cost.toLocaleString('vi-VN')} ₫. Vui lòng nạp thêm tiền.`,
         profile: current,
       };
     }
@@ -204,21 +214,24 @@ export const profileService = {
 
     const updated: UserProfileData = {
       ...current,
-      balance: current.balance - cost,
+      balance: (current.balance || 0) - cost,
       isVip: true,
       vipExpiresAt: newExpiry,
-      transactions: [newTransaction, ...current.transactions],
+      transactions: [newTransaction, ...(current.transactions || [])],
     };
 
-    map[userId] = updated;
-    saveStorage(map);
+    store[userId] = updated;
+    persistStore(store, true);
     return { success: true, profile: updated };
   },
 
   subscribe(callback: () => void): () => void {
     if (!isBrowser()) return () => {};
     const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) callback();
+      if (e.key === STORAGE_KEY) {
+        memoryStore = null;
+        callback();
+      }
     };
     const handleCustom = () => callback();
 

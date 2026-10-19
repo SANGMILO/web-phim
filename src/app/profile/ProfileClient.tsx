@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -74,21 +74,40 @@ export function ProfileClient() {
 
   const [activeTab, setActiveTab] = useState<'info' | 'security' | 'wallet' | 'vip' | 'history'>('info');
 
-  // Profile data subscription
-  const currentUserId = user?.id || 'guest';
-  const profile = useSyncExternalStore(
-    profileService.subscribe.bind(profileService),
-    () => profileService.getProfile(currentUserId, user?.name, user?.email),
-    () => profileService.getProfile(currentUserId, user?.name, user?.email)
+  // Profile data state
+  const currentUserId = user?.id || 'user-demo-1';
+  const [profile, setProfile] = useState<UserProfileData>(() =>
+    profileService.getProfile(currentUserId, user?.name, user?.email)
   );
 
   // Form states - Info
-  const [displayName, setDisplayName] = useState(user?.name || profile.displayName);
+  const [displayName, setDisplayName] = useState(user?.name || profile.displayName || 'user 1');
   const [phone, setPhone] = useState(profile.phone || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [selectedAvatar, setSelectedAvatar] = useState(profile.avatarUrl || 'av-1');
   const [selectedGenres, setSelectedGenres] = useState<string[]>(profile.favoriteGenres || ['Hành động']);
   const [infoToast, setInfoToast] = useState<string | null>(null);
+
+  // Keep profile in sync safely
+  useEffect(() => {
+    const p = profileService.getProfile(currentUserId, user?.name, user?.email);
+    setProfile(p);
+    if (user?.name) {
+      setDisplayName(user.name);
+    } else if (p.displayName) {
+      setDisplayName(p.displayName);
+    }
+    if (p.phone) setPhone(p.phone);
+    if (p.bio) setBio(p.bio);
+    if (p.avatarUrl) setSelectedAvatar(p.avatarUrl);
+    if (p.favoriteGenres) setSelectedGenres(p.favoriteGenres);
+
+    const unsubscribe = profileService.subscribe(() => {
+      const refreshed = profileService.getProfile(currentUserId, user?.name, user?.email);
+      setProfile(refreshed);
+    });
+    return unsubscribe;
+  }, [currentUserId, user?.name, user?.email]);
 
   // Form states - Password
   const [oldPassword, setOldPassword] = useState('');
@@ -107,13 +126,6 @@ export function ProfileClient() {
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [qrCountdown, setQrCountdown] = useState<number>(900); // 15 mins in sec
   const [walletToast, setWalletToast] = useState<string | null>(null);
-
-  // Keep form in sync when profile loads
-  useEffect(() => {
-    if (user) {
-      setDisplayName(user.name);
-    }
-  }, [user]);
 
   // QR Countdown timer
   useEffect(() => {
@@ -462,7 +474,7 @@ export function ProfileClient() {
               </span>
             </div>
             <div style={{ fontSize: '26px', fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' }}>
-              {profile.balance.toLocaleString('vi-VN')} <span style={{ fontSize: '16px', color: '#F59E0B' }}>₫</span>
+              {(profile?.balance ?? 150000).toLocaleString('vi-VN')} <span style={{ fontSize: '16px', color: '#F59E0B' }}>₫</span>
             </div>
             <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
               <button
@@ -1265,14 +1277,16 @@ export function ProfileClient() {
                     SỐ DƯ HIỆN TẠI
                   </div>
                   <div style={{ fontSize: '28px', fontWeight: 800, color: '#FBBF24', letterSpacing: '0.5px' }}>
-                    {profile.balance.toLocaleString('vi-VN')} ₫
+                    {(profile?.balance ?? 150000).toLocaleString('vi-VN')} ₫
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                   <div>
                     <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '1px' }}>CHỦ TÀI KHOẢN</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{profile.displayName.toUpperCase()}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>
+                      {(profile?.displayName || user?.name || 'USER').toUpperCase()}
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '10px', color: 'rgba(255, 255, 255, 0.4)', letterSpacing: '1px' }}>HẠNG THÀNH VIÊN</div>
@@ -1488,13 +1502,13 @@ export function ProfileClient() {
               <History size={18} color="#E50914" /> Lịch sử biến động số dư & Giao dịch
             </h3>
 
-            {profile.transactions.length === 0 ? (
+            {(!profile?.transactions || profile.transactions.length === 0) ? (
               <p style={{ color: '#8E8F99', fontSize: '14px', textAlign: 'center', padding: '32px 0' }}>
                 Chưa có giao dịch nào được ghi nhận.
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {profile.transactions.map((tx) => {
+                {(profile.transactions || []).map((tx) => {
                   const isPositive = tx.amount > 0;
                   return (
                     <div
