@@ -372,25 +372,27 @@ export function Header() {
                         <Bookmark size={15} /> Danh sách xem ({count})
                       </Link>
 
-                      <Link
-                        href="/admin"
-                        onClick={() => setUserDropdown(false)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 10px',
-                          fontSize: '13px',
-                          color: 'var(--accent-crimson)',
-                          fontWeight: 600,
-                          borderRadius: 'var(--radius-sm)',
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(229, 57, 79, 0.1)')}
-                        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                      >
-                        <Shield size={15} /> Trang Quản Trị (Admin)
-                      </Link>
+                      {user.isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserDropdown(false)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 10px',
+                            fontSize: '13px',
+                            color: 'var(--accent-crimson)',
+                            fontWeight: 600,
+                            borderRadius: 'var(--radius-sm)',
+                            transition: 'background 0.2s',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(229, 57, 79, 0.1)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <Shield size={15} /> Trang Quản Trị (Admin)
+                        </Link>
+                      )}
 
                       <button
                         onClick={() => {
@@ -599,6 +601,22 @@ export function Header() {
                   <span className="badge badge-quality" style={{ marginLeft: 'auto' }}>{count}</span>
                 )}
               </Link>
+              {user?.isAdmin && (
+                <Link
+                  href="/admin"
+                  style={{
+                    padding: '16px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: 'var(--accent-crimson)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Shield size={18} /> Trang Quản Trị
+                </Link>
+              )}
             </div>
           </nav>
         </div>

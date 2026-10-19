@@ -21,7 +21,32 @@ export async function updateSession(request: NextRequest) {
   });
 
   // getClaims verifies the JWT and refreshes it when needed.
-  await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const redirectWithRefreshedCookies = (url: URL) => {
+      const redirectResponse = NextResponse.redirect(url);
+      response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+      return redirectResponse;
+    };
+
+    if (error || !data?.claims) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/login';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`);
+      return redirectWithRefreshedCookies(loginUrl);
+    }
+
+    if (data.claims.app_metadata?.role !== 'admin') {
+      const forbiddenUrl = request.nextUrl.clone();
+      forbiddenUrl.pathname = '/';
+      forbiddenUrl.search = '';
+      forbiddenUrl.searchParams.set('admin', 'forbidden');
+      return redirectWithRefreshedCookies(forbiddenUrl);
+    }
+  }
+
   return response;
 }
 

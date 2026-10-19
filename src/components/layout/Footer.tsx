@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { BRAND } from '@/config/brand';
 import { GENRES } from '@/data/demo-movies';
 import { BrandLogo } from '@/components/common/BrandLogo';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const BROWSE_LINKS = [
   { href: '/movies', label: 'Phim lẻ' },
@@ -12,11 +13,11 @@ const BROWSE_LINKS = [
   { href: '/anime', label: 'Anime' },
   { href: '/theaters', label: 'Chiếu rạp' },
   { href: '/upcoming', label: 'Sắp chiếu' },
-  { href: '/admin', label: 'Quản trị Admin' },
 ];
 
 export function Footer() {
   const pathname = usePathname();
+  const { user } = useAuth();
 
   if (pathname?.startsWith('/admin')) {
     return null;
@@ -107,6 +108,20 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+              {user?.isAdmin && (
+                <li>
+                  <Link
+                    href="/admin"
+                    style={{
+                      fontSize: '14px',
+                      color: 'var(--text-secondary)',
+                      transition: 'color 0.2s',
+                    }}
+                  >
+                    Quản trị Admin
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

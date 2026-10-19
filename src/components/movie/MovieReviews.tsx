@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   Star,
   ThumbsUp,
@@ -52,8 +54,10 @@ function formatRelativeTime(isoString: string): string {
 }
 
 export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
+  const pathname = usePathname();
+  const loginUrl = `/login?redirect=${encodeURIComponent(pathname || '/')}`;
   const { movieReviews, stats, addReview, toggleLike } = useReviews(movieId);
-  const { user, isAuthenticated, loginDemo } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // Review Form State
   const [rating, setRating] = useState<number>(10);
@@ -332,24 +336,20 @@ export function MovieReviews({ movieId, movieTitle }: MovieReviewsProps) {
           </h3>
 
           {!isAuthenticated && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#8E8F99' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#8E8F99' }}>
               <span>Chưa đăng nhập?</span>
-              <button
-                type="button"
-                onClick={() => loginDemo()}
+              <Link
+                href={loginUrl}
                 style={{
-                  background: 'none',
-                  border: 'none',
                   color: '#F59E0B',
                   fontWeight: 600,
                   cursor: 'pointer',
                   textDecoration: 'underline',
-                  padding: 0,
-                  fontSize: '12px',
+                  fontSize: '13px',
                 }}
               >
-                Đăng nhập demo nhanh
-              </button>
+                Đăng nhập
+              </Link>
             </div>
           )}
         </div>
