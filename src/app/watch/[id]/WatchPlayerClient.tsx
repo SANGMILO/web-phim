@@ -29,6 +29,7 @@ import { MovieImage } from '@/components/common/MovieImage';
 import { toGoogleDriveEmbedUrl, isGoogleDriveUrl } from '@/lib/utils/google-drive';
 import { MovieReviews } from '@/components/movie/MovieReviews';
 import { movieStore } from '@/lib/movies/movie-storage';
+import { toYouTubeEmbedUrl } from '@/lib/utils/youtube';
 
 interface WatchPlayerClientProps {
   movie: Movie | null;
@@ -89,6 +90,10 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
 
   const gdriveSource = toGoogleDriveEmbedUrl(rawGdrive);
   const hasGdrive = Boolean(gdriveSource);
+  const trailerEmbedUrl = toYouTubeEmbedUrl(movie?.trailerUrl, {
+    autoplay: true,
+    enableJsApi: true,
+  });
 
   // Video state
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -134,7 +139,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
     ? 'gdrive'
     : directVideoSource
     ? 'stream'
-    : movie?.trailerUrl
+    : trailerEmbedUrl
     ? 'official'
     : 'stream';
 
@@ -359,7 +364,7 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
             </span>
           )}
 
-          {movie.trailerUrl && (
+          {trailerEmbedUrl && (
             <button
               onClick={() => setSelectedServer('official')}
               className={`chip ${selectedServer === 'official' ? 'chip-active' : ''}`}
@@ -386,13 +391,13 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
             </button>
           )}
 
-          {!hasGdrive && !movie.trailerUrl && !directVideoSource && (
+          {!hasGdrive && !trailerEmbedUrl && !directVideoSource && (
             <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Chưa có nguồn video cho phim này.</span>
           )}
         </div>
 
         {/* Unlinked Episode / Movie Notice: Auto fallback to Trailer */}
-        {!hasGdrive && movie.trailerUrl && (
+        {!hasGdrive && trailerEmbedUrl && (
           <div
             style={{
               marginBottom: '18px',
@@ -448,13 +453,14 @@ export function WatchPlayerClient({ movie: initialMovie, slugOrId, related }: Wa
                   allowFullScreen
                   style={{ width: '100%', height: '100%', border: 'none' }}
                 />
-              ) : selectedServer === 'official' && movie.trailerUrl ? (
+              ) : selectedServer === 'official' && trailerEmbedUrl ? (
                 <iframe
-                  key={`trailer-${movie.id}-${currentEpNumber}-${movie.trailerUrl}`}
-                  src={`${movie.trailerUrl}?autoplay=1&rel=0&enablejsapi=1`}
+                  key={`trailer-${movie.id}-${currentEpNumber}-${trailerEmbedUrl}`}
+                  src={trailerEmbedUrl}
                   title={movie.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
                   style={{ width: '100%', height: '100%', border: 'none' }}
                 />
               ) : (

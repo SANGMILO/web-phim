@@ -22,6 +22,7 @@ import type { Movie, ContentType, CastMember, Season, Episode } from '@/types/mo
 import { useMovieAdmin } from '@/lib/movies/useMovieAdmin';
 import { generateSlug } from '@/lib/movies/movie-storage';
 import { toGoogleDriveEmbedUrl, isGoogleDriveUrl } from '@/lib/utils/google-drive';
+import { toYouTubeEmbedUrl } from '@/lib/utils/youtube';
 import { useToast } from '@/components/admin/AdminToast';
 import { MovieImage } from '@/components/common/MovieImage';
 
@@ -99,7 +100,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
     initialMovie?.contentType || 'movie'
   );
   const [trailerUrl, setTrailerUrl] = useState(
-    initialMovie?.trailerUrl || 'https://www.youtube.com/embed/Way9Dexny3w'
+    initialMovie?.trailerUrl || ''
   );
   const [director, setDirector] = useState(initialMovie?.director || '');
   const [quality, setQuality] = useState(initialMovie?.quality || 'FHD');
@@ -299,6 +300,12 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
     }
 
     const cleanSlug = slug.trim() || generateSlug(title);
+    const cleanTrailer = trailerUrl.trim();
+    const normalizedTrailer = cleanTrailer ? toYouTubeEmbedUrl(cleanTrailer) : null;
+    if (cleanTrailer && !normalizedTrailer) {
+      showToast('Link trailer phải là URL YouTube hợp lệ.', 'error');
+      return;
+    }
     const convertedGdrive = toGoogleDriveEmbedUrl(gdriveUrl);
     if (gdriveUrl.trim() && !convertedGdrive) {
       showToast('Link phim phải là URL HTTPS hợp lệ từ drive.google.com.', 'error');
@@ -358,7 +365,7 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
       genres,
       rating: Number(rating) || 8.0,
       contentType,
-      trailerUrl: trailerUrl.trim() || 'https://www.youtube.com/embed/Way9Dexny3w',
+      trailerUrl: normalizedTrailer || '',
       // If user supplied Google Drive, store in gdriveUrl and playbackUrl
       gdriveUrl: primaryGdrive,
       playbackUrl: primaryGdrive,
@@ -1519,11 +1526,11 @@ export function MovieForm({ initialMovie, isEdit = false }: MovieFormProps) {
               {/* Trailer Embed URL */}
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
-                  YouTube Trailer Embed URL
+                  YouTube Trailer URL
                 </label>
                 <input
                   type="url"
-                  placeholder="https://www.youtube.com/embed/..."
+                  placeholder="https://youtu.be/... hoặc https://www.youtube.com/watch?v=..."
                   value={trailerUrl}
                   onChange={(e) => setTrailerUrl(e.target.value)}
                   style={{

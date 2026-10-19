@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
+import { toYouTubeEmbedUrl } from '@/lib/utils/youtube';
 
 interface TrailerModalProps {
   url: string;
@@ -11,6 +12,7 @@ interface TrailerModalProps {
 
 export function TrailerModal({ url, title, onClose }: TrailerModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const embedUrl = toYouTubeEmbedUrl(url, { autoplay: true, mute: true });
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -73,18 +75,25 @@ export function TrailerModal({ url, title, onClose }: TrailerModalProps) {
 
         {/* Video */}
         <div style={{ aspectRatio: '16/9', width: '100%' }}>
-          <iframe
-            src={`${url}?autoplay=1&mute=1`}
-            title={`Trailer: ${title}`}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              borderRadius: 'var(--radius-xl)',
-            }}
-          />
+          {embedUrl ? (
+            <iframe
+              src={embedUrl}
+              title={`Trailer: ${title}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: 'var(--radius-xl)',
+              }}
+            />
+          ) : (
+            <div style={{ display: 'grid', placeItems: 'center', height: '100%', color: 'var(--text-muted)' }}>
+              Liên kết trailer YouTube không hợp lệ.
+            </div>
+          )}
         </div>
       </div>
     </div>

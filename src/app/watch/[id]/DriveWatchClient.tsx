@@ -9,6 +9,7 @@ import { useWatchlist } from '@/components/providers/WatchlistProvider';
 import { MovieRail } from '@/components/movie/MovieRail';
 import { MovieImage } from '@/components/common/MovieImage';
 import { PlaybackPlayer } from '@/components/movie/PlaybackPlayer';
+import { toYouTubeEmbedUrl } from '@/lib/utils/youtube';
 
 interface Props {
   movie: Movie;
@@ -30,9 +31,10 @@ export function DriveWatchClient({ movie, related }: Props) {
   const availableSources = currentEpisode?.source
     ? [currentEpisode.source]
     : (movie.playbackSources ?? []);
+  const trailerEmbedUrl = toYouTubeEmbedUrl(movie.trailerUrl);
   const initialSelection: Selection | null = availableSources[0]
     ? { kind: 'source', source: availableSources[0] }
-    : movie.trailerUrl
+    : trailerEmbedUrl
       ? { kind: 'trailer' }
       : null;
   const [manualSelection, setManualSelection] = useState<Selection | null>(null);
@@ -63,14 +65,14 @@ export function DriveWatchClient({ movie, related }: Props) {
               <Play size={12} /> {source.label}
             </button>
           ))}
-          {movie.trailerUrl && <button onClick={() => setManualSelection({ kind: 'trailer' })} className={`chip ${selection?.kind === 'trailer' ? 'chip-active' : ''}`}><Sparkles size={12} /> Trailer</button>}
+          {trailerEmbedUrl && <button onClick={() => setManualSelection({ kind: 'trailer' })} className={`chip ${selection?.kind === 'trailer' ? 'chip-active' : ''}`}><Sparkles size={12} /> Trailer</button>}
           {!selection && <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Chưa có nguồn video.</span>}
         </div>
 
         <div className="watch-layout" style={{ display: 'grid', gridTemplateColumns: isSeries && episodes.length ? 'minmax(0, 1fr) 340px' : '1fr', gap: 24, alignItems: 'start' }}>
           <div>
-            {selection?.kind === 'trailer' && movie.trailerUrl ? (
-              <div className="player-container"><iframe src={movie.trailerUrl} title={`Trailer ${movie.title}`} allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen style={{ width: '100%', height: '100%', border: 0 }} /></div>
+            {selection?.kind === 'trailer' && trailerEmbedUrl ? (
+              <div className="player-container"><iframe src={trailerEmbedUrl} title={`Trailer ${movie.title}`} allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" style={{ width: '100%', height: '100%', border: 0 }} /></div>
             ) : (
               <PlaybackPlayer source={selection?.kind === 'source' ? selection.source : null} directUrl={currentEpisode?.playbackUrl ?? movie.playbackUrl} posterUrl={movie.backdropUrl} title={currentEpisode ? `${movie.title} - ${currentEpisode.title}` : movie.title} />
             )}
