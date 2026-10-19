@@ -1,6 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { movieStore } from './movie-storage';
-import { demoMovies } from '@/data/demo-movies';
 
 describe('movieStore storage and retrieval tests', () => {
   const storageMap = new Map<string, string>();
@@ -73,5 +72,14 @@ describe('movieStore storage and retrieval tests', () => {
     const movieByAlias = movieStore.getMovieById('dune-1');
     expect(movieByAlias).not.toBeNull();
     expect(movieByAlias?.gdriveUrl).toBe(driveUrl);
+  });
+
+  it('does not confuse similarly named sequels when one has a Drive source', () => {
+    const duneOne = movieStore.getMovieById('dune-1');
+    const duneTwo = movieStore.getMovieById('dune-2');
+
+    expect(duneOne?.id).toBe('dune-1');
+    expect(duneTwo?.id).toBe('dune-2');
+    expect(duneTwo?.title).toBe('Xứ Cát: Phần Hai');
   });
 });

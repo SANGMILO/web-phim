@@ -88,30 +88,8 @@ export const movieStore = {
     const cleanSlug = generateSlug(clean);
     const movies = this.getMovies();
 
-    // 1. Prioritize match that already has a Google Drive link attached
-    const withDrive = movies.find((m) => {
-      const hasLink = Boolean(m.gdriveUrl || m.playbackUrl);
-      if (!hasLink) return false;
-      const mId = m.id?.toLowerCase() || '';
-      const mSlug = m.slug?.toLowerCase() || '';
-      const mTitleSlug = generateSlug(m.title || '');
-      const mOrigSlug = generateSlug(m.originalTitle || '');
-
-      return (
-        mId === clean ||
-        mSlug === clean ||
-        mTitleSlug === clean ||
-        mTitleSlug === cleanSlug ||
-        mOrigSlug === clean ||
-        mOrigSlug === cleanSlug ||
-        (clean.includes('dune') && (mSlug.includes('dune') || mTitleSlug.includes('cat'))) ||
-        ((clean.includes('khi') || clean.includes('apes')) && (mSlug.includes('apes') || mTitleSlug.includes('khi')))
-      );
-    });
-
-    if (withDrive) return withDrive;
-
-    // 2. Direct ID or Slug match
+    // Route identity must always win. Prioritizing a playable movie here can
+    // return the wrong sequel when similarly named titles share an alias.
     const exact = movies.find((m) => {
       const mId = m.id?.toLowerCase() || '';
       const mSlug = m.slug?.toLowerCase() || '';
@@ -120,21 +98,14 @@ export const movieStore = {
 
     if (exact) return exact;
 
-    // 3. Fallback title/alias match
+    // Fall back only to an exact normalized title. Broad franchise matching
+    // (for example any value containing "dune") makes sequels ambiguous.
     return (
       movies.find((m) => {
-        const mSlug = m.slug?.toLowerCase() || '';
         const mTitleSlug = generateSlug(m.title || '');
         const mOrigSlug = generateSlug(m.originalTitle || '');
 
-        return (
-          mTitleSlug === clean ||
-          mTitleSlug === cleanSlug ||
-          mOrigSlug === clean ||
-          mOrigSlug === cleanSlug ||
-          (clean.includes('dune') && (mSlug.includes('dune') || mTitleSlug.includes('cat'))) ||
-          ((clean.includes('khi') || clean.includes('apes')) && (mSlug.includes('apes') || mTitleSlug.includes('khi')))
-        );
+        return mTitleSlug === cleanSlug || mOrigSlug === cleanSlug;
       }) ?? null
     );
   },
