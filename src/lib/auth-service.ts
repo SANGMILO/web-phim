@@ -1,6 +1,7 @@
 'use client';
 
 import type { User } from '@/types/auth';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 
@@ -21,13 +22,7 @@ function notify() {
   listeners.forEach((callback) => callback());
 }
 
-function mapUser(user: {
-  id: string;
-  email?: string;
-  created_at: string;
-  user_metadata?: Record<string, unknown>;
-  app_metadata?: Record<string, unknown>;
-}): User {
+function mapUser(user: SupabaseUser): User {
   return {
     id: user.id,
     email: user.email ?? '',
@@ -42,6 +37,27 @@ function mapUser(user: {
     createdAt: user.created_at,
     isAdmin: user.app_metadata?.role === 'admin',
   };
+}
+
+async function mapUserWithProfile(user: SupabaseUser): Promise<User> {
+  const mapped = mapUser(user);
+  try {
+    const { data, error } = await createClient()
+      .from('profiles')
+      .select('display_name,avatar_url,role,status')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error || !data) return mapped;
+    return {
+      ...mapped,
+      name: data.display_name || mapped.name,
+      avatarUrl: data.avatar_url || undefined,
+      isAdmin: data.role === 'admin' && data.status === 'active',
+    };
+  } catch {
+    return mapped;
+  }
 }
 
 function initialize() {
@@ -60,13 +76,24 @@ function initialize() {
   }
 
   const supabase = createClient();
-  void supabase.auth.getUser().then(({ data }) => {
-    cachedUser = data.user ? mapUser(data.user) : null;
+  void supabase.auth.getUser().then(async ({ data }) => {
+    cachedUser = data.user ? await mapUserWithProfile(data.user) : null;
     notify();
   });
   supabase.auth.onAuthStateChange((_event, session) => {
-    cachedUser = session?.user ? mapUser(session.user) : null;
-    notify();
+    const nextUser = session?.user;
+    if (!nextUser) {
+      cachedUser = null;
+      notify();
+      return;
+    }
+
+    window.setTimeout(() => {
+      void mapUserWithProfile(nextUser).then((mapped) => {
+        cachedUser = mapped;
+        notify();
+      });
+    }, 0);
   });
 }
 
@@ -95,7 +122,7 @@ export const authService = {
       password,
     });
     if (error) return { success: false, error: error.message };
-    const user = data.user ? mapUser(data.user) : undefined;
+    const user = data.user ? await mapUserWithProfile(data.user) : undefined;
     return { success: Boolean(user), user };
   },
 
@@ -109,7 +136,7 @@ export const authService = {
       options: { data: { display_name: name.trim() } },
     });
     if (error) return { success: false, error: error.message };
-    const user = data.user ? mapUser(data.user) : undefined;
+    const user = data.user ? await mapUserWithProfile(data.user) : undefined;
     return { success: Boolean(user), user, needsEmailConfirmation: !data.session };
   },
 
@@ -149,7 +176,7 @@ export const authService = {
     if (isSupabaseConfigured()) {
       const { data, error } = await createClient().auth.updateUser({ password: newPassword });
       if (error) return { success: false, error: error.message };
-      const user = data.user ? mapUser(data.user) : undefined;
+      const user = data.user ? await mapUserWithProfile(data.user) : undefined;
       return { success: true, user };
     }
     return { success: true, user: cachedUser || undefined };

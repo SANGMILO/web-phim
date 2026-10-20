@@ -105,7 +105,8 @@ export async function POST(req: Request) {
     if (claimsError || !claimsData?.claims) {
       return NextResponse.json({ error: 'Bạn cần đăng nhập.' }, { status: 401 });
     }
-    if (claimsData.claims.app_metadata?.role !== 'admin') {
+    const { data: isAdmin, error: roleError } = await supabase.rpc('is_admin');
+    if (roleError || !isAdmin) {
       return NextResponse.json({ error: 'Bạn không có quyền quản trị.' }, { status: 403 });
     }
 

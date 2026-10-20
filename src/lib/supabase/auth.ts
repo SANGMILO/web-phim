@@ -7,8 +7,6 @@ export async function requireAdmin() {
   const claims = data?.claims;
 
   if (error || !claims) redirect('/login?redirect=/admin');
-  if (claims.app_metadata?.role !== 'admin') redirect('/?admin=forbidden');
-
   const { data: isAdmin, error: roleError } = await supabase.rpc('is_admin');
   if (roleError || !isAdmin) redirect('/?admin=forbidden');
 
