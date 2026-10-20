@@ -24,7 +24,16 @@ import { useToast } from '@/components/admin/AdminToast';
 import type { UserRole, UserAccountStatus } from '@/types/user-admin';
 
 export default function AdminUsersPage() {
-  const { users, stats, updateUserStatus, updateUserRole, deleteUser } = useUsers();
+  const {
+    users,
+    stats,
+    loading,
+    error,
+    refresh,
+    updateUserStatus,
+    updateUserRole,
+    deleteUser,
+  } = useUsers();
   const { showToast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -106,6 +115,40 @@ export default function AdminUsersPage() {
       />
 
       <div style={{ padding: '28px', maxWidth: '1400px', width: '100%' }}>
+        {error && (
+          <div
+            role="alert"
+            style={{
+              marginBottom: '20px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: '#FCA5A5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+            }}
+          >
+            <span>Không thể đồng bộ danh sách người dùng: {error}</span>
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              style={{
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '6px',
+                background: 'rgba(255,255,255,0.06)',
+                color: '#fff',
+                padding: '6px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
         {/* Metric Cards Row */}
         <div
           style={{
@@ -429,7 +472,13 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      Đang đồng bộ người dùng từ Supabase...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={7} style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-muted)' }}>
                       <Users size={32} style={{ margin: '0 auto 10px auto', opacity: 0.3 }} />

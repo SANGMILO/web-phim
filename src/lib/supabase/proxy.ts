@@ -38,7 +38,8 @@ export async function updateSession(request: NextRequest) {
       return redirectWithRefreshedCookies(loginUrl);
     }
 
-    if (data.claims.app_metadata?.role !== 'admin') {
+    const { data: isAdmin, error: roleError } = await supabase.rpc('is_admin');
+    if (roleError || !isAdmin) {
       const forbiddenUrl = request.nextUrl.clone();
       forbiddenUrl.pathname = '/';
       forbiddenUrl.search = '';
