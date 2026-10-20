@@ -277,7 +277,11 @@ export function ProfileClient() {
   }, [showQrModal]);
 
   useEffect(() => {
-    if (!showQrModal || !activeTopup || activeTopup.status !== 'pending') return;
+    if (
+      !showQrModal ||
+      !activeTopup ||
+      (activeTopup.status !== 'pending' && activeTopup.status !== 'submitted')
+    ) return;
 
     let cancelled = false;
     const checkStatus = async () => {
@@ -292,6 +296,10 @@ export function ProfileClient() {
           setWalletToast(
             `Đã xác nhận giao dịch ${latest.amount.toLocaleString('vi-VN')} ₫ từ ngân hàng.`,
           );
+        } else if (latest.status === 'cancelled') {
+          setWalletToast('Admin đã từ chối yêu cầu nạp tiền.');
+        } else if (latest.status === 'expired') {
+          setWalletToast('Yêu cầu nạp tiền đã hết hạn.');
         }
       } catch {
         // A temporary polling failure must not alter the payment state.
@@ -452,7 +460,7 @@ export function ProfileClient() {
       return;
     }
     if (selectedPaymentMethod !== 'vietqr') {
-      alert('Phương thức này chưa có webhook xác minh. Vui lòng dùng VietQR.');
+      alert('Phương thức này chưa hỗ trợ xác nhận. Vui lòng dùng QR chuyển khoản.');
       return;
     }
 
@@ -477,7 +485,9 @@ export function ProfileClient() {
     if (!activeTopup) return;
     setIsCheckingTopup(true);
     try {
-      const latest = await walletService.getTopup(activeTopup.id);
+      const latest = activeTopup.status === 'pending'
+        ? await walletService.submitTopupForReview(activeTopup.id)
+        : await walletService.getTopup(activeTopup.id);
       if (!latest) throw new Error('Không tìm thấy yêu cầu nạp tiền.');
       setActiveTopup(latest);
       if (latest.status === 'paid') {
@@ -486,8 +496,12 @@ export function ProfileClient() {
         setWalletToast(`Đã cộng ${latest.amount.toLocaleString('vi-VN')} ₫ vào ví.`);
       } else if (latest.status === 'expired') {
         setWalletToast('Yêu cầu đã hết hạn. Vui lòng tạo mã QR mới.');
+      } else if (latest.status === 'cancelled') {
+        setWalletToast('Yêu cầu đã bị từ chối. Vui lòng liên hệ quản trị viên nếu bạn đã chuyển khoản.');
+      } else if (latest.status === 'submitted') {
+        setWalletToast('Đã gửi yêu cầu. Admin sẽ kiểm tra tài khoản ngân hàng và duyệt giao dịch.');
       } else {
-        setWalletToast('Chưa nhận được xác nhận từ ngân hàng. Hệ thống vẫn đang tự kiểm tra.');
+        setWalletToast('Yêu cầu vẫn đang chờ xử lý.');
       }
     } catch (error) {
       setWalletToast(error instanceof Error ? error.message : 'Không thể kiểm tra giao dịch.');
@@ -1685,8 +1699,8 @@ export function ProfileClient() {
                 {[
                   {
                     key: 'vietqr',
-                    title: 'Chuyển khoản VietQR',
-                    desc: paymentConfig.bank.note || 'Quét mã QR tự động nhận tiền trong 30s qua App Ngân hàng (MB, VCB, Techcombank...)',
+                    title: 'Chuyển khoản QR',
+                    desc: paymentConfig.bank.note || 'Quét QR, chuyển đúng số tiền và chờ admin xác nhận.',
                     badge: 'Khuyên dùng',
                     enabled: paymentConfig.methods.vietqr,
                   },
@@ -1869,7 +1883,7 @@ export function ProfileClient() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontWeight: 600, marginBottom: '6px' }}>
                   <Shield size={14} color="#10B981" /> Thanh toán an toàn 100%
                 </div>
-                Mọi giao dịch nạp tiền đều được bảo mật qua mã QR động tiêu chuẩn VietQR của Napas. Tiền sẽ được cộng tức thì vào tài khoản của bạn để xem phim không giới hạn.
+                Sau khi chuyển khoản, hãy gửi yêu cầu xác nhận. Admin sẽ đối chiếu giao dịch ngân hàng trước khi cộng tiền vào ví.
               </div>
             </div>
           </div>
@@ -2234,7 +2248,7 @@ export function ProfileClient() {
                 </>
               ) : (
                 <>
-                  <QrCode size={13} /> VIETQR CHUYỂN KHOẢN TỰ ĐỘNG
+                  <QrCode size={13} /> QR CHUYỂN KHOẢN
                 </>
               )}
             </div>
@@ -2483,7 +2497,7 @@ export function ProfileClient() {
             </div>
 
             <div style={{ fontSize: '11px', color: '#8E8F99', marginBottom: '14px' }}>
-              Hệ thống chỉ cộng tiền sau khi SePay xác minh giao dịch đúng mã và đúng số tiền.
+              Hệ thống chỉ cộng tiền sau khi admin kiểm tra giao dịch đã vào tài khoản ngân hàng.
               <br />
               Mã giao dịch tự động hết hạn sau:{' '}
               <strong style={{ color: '#F59E0B' }}>{Math.floor(qrCountdown / 60)}:{(qrCountdown % 60).toString().padStart(2, '0')}</strong>
@@ -2510,7 +2524,11 @@ export function ProfileClient() {
               }}
             >
               <CheckCircle2 size={16} />{' '}
-              {isCheckingTopup ? 'Đang hỏi trạng thái ngân hàng...' : 'Kiểm tra trạng thái giao dịch'}
+              {isCheckingTopup
+                ? 'Đang xử lý...'
+                : activeTopup?.status === 'pending'
+                  ? 'Tôi đã chuyển khoản – Gửi admin duyệt'
+                  : 'Kiểm tra trạng thái duyệt'}
             </button>
           </div>
         </div>

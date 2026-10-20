@@ -55,6 +55,6 @@ export interface AdminTransactionItem {
   amount: number;
   description: string;
   createdAt: string;
-  status: 'success' | 'pending';
+  status: 'success' | 'pending' | 'submitted' | 'cancelled' | 'expired';
   method: string;
 }

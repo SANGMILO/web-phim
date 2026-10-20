@@ -11,8 +11,9 @@ export interface TopupRequest {
   currency: 'VND';
   method: 'vietqr';
   paymentCode: string;
-  status: 'pending' | 'paid' | 'expired' | 'cancelled';
+  status: 'pending' | 'submitted' | 'paid' | 'expired' | 'cancelled';
   expiresAt: string;
+  submittedAt?: string;
   paidAt?: string;
 }
 
@@ -77,6 +78,7 @@ function asTopupRequest(value: unknown): TopupRequest {
     paymentCode: String(row.payment_code || row.paymentCode || ''),
     status: String(row.status || 'pending') as TopupRequest['status'],
     expiresAt: String(row.expires_at || row.expiresAt || ''),
+    submittedAt: typeof row.submitted_at === 'string' ? row.submitted_at : undefined,
     paidAt: typeof row.paid_at === 'string' ? row.paid_at : undefined,
   };
 }
@@ -114,9 +116,9 @@ export const walletService = {
         .limit(100),
       supabase
         .from('wallet_topup_requests')
-        .select('id,amount,currency,method,payment_code,status,expires_at,paid_at')
+        .select('id,amount,currency,method,payment_code,status,expires_at,submitted_at,paid_at')
         .eq('user_id', userId)
-        .eq('status', 'pending')
+        .in('status', ['pending', 'submitted'])
         .order('created_at', { ascending: false })
         .limit(5),
       this.getPaymentSettings(),
@@ -163,11 +165,22 @@ export const walletService = {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('wallet_topup_requests')
-      .select('id,amount,currency,method,payment_code,status,expires_at,paid_at')
+      .select('id,amount,currency,method,payment_code,status,expires_at,submitted_at,paid_at')
       .eq('id', requestId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     return data ? asTopupRequest(data) : null;
+  },
+
+  async submitTopupForReview(requestId: string): Promise<TopupRequest> {
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc('submit_topup_for_review', {
+      target_request_id: requestId,
+    });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('Không thể gửi yêu cầu xác nhận thanh toán.');
+    return asTopupRequest(row);
   },
 
   async purchaseVip(plan: 'vip_month' | 'vip_year') {
@@ -209,8 +222,12 @@ export const walletService = {
         amount: Number(row.amount || 0),
         description: String(row.description || 'Giao dịch nạp tiền'),
         createdAt: String(row.created_at || new Date(0).toISOString()),
-        status: row.status === 'success' ? 'success' : 'pending',
-        method: String(row.method || 'VietQR / SePay'),
+        status:
+          row.status === 'success' || row.status === 'submitted' ||
+          row.status === 'cancelled' || row.status === 'expired'
+            ? row.status
+            : 'pending',
+        method: String(row.method || 'QR chuyển khoản'),
       };
     });
   },
@@ -224,6 +241,16 @@ export const walletService = {
     });
     if (error) throw new Error(getMessage(error, 'Không thể điều chỉnh số dư.'));
     return Number(data || 0);
+  },
+
+  async reviewTopup(requestId: string, approve: boolean, note = ''): Promise<void> {
+    const supabase = createClient();
+    const { error } = await supabase.rpc('admin_review_topup', {
+      target_request_id: requestId,
+      approve,
+      admin_note: note,
+    });
+    if (error) throw new Error(getMessage(error, 'Không thể duyệt yêu cầu nạp tiền.'));
   },
 };
 

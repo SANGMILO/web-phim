@@ -61,7 +61,7 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
     accountNumber: '',
     accountHolder: '',
     memoPrefix: 'CV NAP',
-    note: 'Quét mã QR tự động nhận tiền trong 30s qua App Ngân hàng (MB, VCB, Techcombank...)',
+    note: 'Quét QR, chuyển đúng số tiền và nội dung. Admin sẽ kiểm tra trước khi cộng ví.',
   },
   momo: {
     phone: '',

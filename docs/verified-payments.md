@@ -1,4 +1,33 @@
-# Verified wallet payments
+# Manual QR wallet payments (default)
+
+The default flow does not require a SePay account. An administrator uploads a
+bank QR image, the user transfers money and submits the request, then the admin
+checks the real bank transaction before approving it.
+
+## Manual QR setup
+
+1. Apply `202610200001_create_verified_wallet_ledger.sql`.
+2. Apply `202610200002_add_manual_topup_approval.sql`.
+3. Sign in as an admin and open `/admin/payments`.
+4. Upload a PNG/JPEG/WebP bank QR image, set a short prefix such as `CVNAP`, and
+   save the configuration.
+5. A user creates a request, transfers the exact amount with the displayed code,
+   then clicks **I have transferred – Send to admin**.
+6. The admin opens the transaction history, checks the bank app, and clicks
+   **Approve** or **Reject**.
+
+Clicking the user button never credits the wallet. Approval locks the request and
+wallet, credits it once, and appends an audited ledger entry atomically. Repeated
+approval cannot credit the same request twice.
+
+Use two accounts for acceptance testing: an ordinary user creates and submits a
+10,000 VND request; an admin verifies the amount and payment code in the bank app
+and approves it. Confirm that the wallet and ledger increase exactly once.
+
+## Optional SePay automation
+
+The remaining sections describe the optional automatic SePay mode. They are not
+required when using manual admin approval.
 
 The wallet balance is derived from an append-only server ledger. A browser cannot
 credit its own balance. A top-up is credited only after the SePay webhook is

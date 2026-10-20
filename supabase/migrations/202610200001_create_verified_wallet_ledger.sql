@@ -153,18 +153,18 @@ begin
     raise exception 'Amount must be between 10,000 and 50,000,000 VND' using errcode = '22023';
   end if;
   if (
-    select count(*) from public.wallet_topup_requests
-    where user_id = current_user_id
-      and created_at > now() - interval '10 minutes'
+    select count(*) from public.wallet_topup_requests as requests
+    where requests.user_id = current_user_id
+      and requests.created_at > now() - interval '10 minutes'
   ) >= 5 then
     raise exception 'Too many top-up requests. Please wait and try again.' using errcode = 'P0001';
   end if;
 
-  update public.wallet_topup_requests
+  update public.wallet_topup_requests as requests
   set status = 'expired'
-  where user_id = current_user_id
-    and status = 'pending'
-    and expires_at <= now();
+  where requests.user_id = current_user_id
+    and requests.status = 'pending'
+    and requests.expires_at <= now();
 
   select
     upper(regexp_replace(coalesce(bank ->> 'memoPrefix', 'CVNAP'), '[^A-Za-z0-9]', '', 'g')),
@@ -180,7 +180,8 @@ begin
   loop
     generated_code := code_prefix || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
     exit when not exists (
-      select 1 from public.wallet_topup_requests where payment_code = generated_code
+      select 1 from public.wallet_topup_requests as requests
+      where requests.payment_code = generated_code
     );
   end loop;
 
