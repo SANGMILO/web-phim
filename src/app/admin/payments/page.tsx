@@ -16,8 +16,6 @@ import {
   ExternalLink,
   ShieldCheck,
   Search,
-  Filter,
-  ArrowUpRight,
   Plus,
   Coins,
   DollarSign,
@@ -32,12 +30,9 @@ import {
   SUPPORTED_BANKS,
   DEFAULT_PAYMENT_SETTINGS,
 } from '@/lib/payments/payment-service';
-import { profileService } from '@/lib/profile/profile-service';
+import { walletService } from '@/lib/payments/wallet-service';
 import type {
   PaymentSettings,
-  BankConfig,
-  EWalletConfig,
-  CardGatewayConfig,
   PresetPackage,
   AdminTransactionItem,
 } from '@/types/payment';
@@ -52,6 +47,7 @@ export default function AdminPaymentsPage() {
 
   // Manual adjustment modal
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [reviewingTopupId, setReviewingTopupId] = useState<string | null>(null);
   const [creditUserId, setCreditUserId] = useState('');
   const [creditAmount, setCreditAmount] = useState('100000');
   const [creditMemo, setCreditMemo] = useState('Admin cộng tiền thưởng');
@@ -63,32 +59,50 @@ export default function AdminPaymentsPage() {
 
   // Load settings & transactions
   useEffect(() => {
-    const unsub = paymentService.subscribe(() => {
-      setSettings(paymentService.getSettings());
-      setTransactions(paymentService.getAllTransactions());
-    });
-    const timer = window.setTimeout(() => {
-      setSettings(paymentService.getSettings());
-      setTransactions(paymentService.getAllTransactions());
-    }, 0);
+    let cancelled = false;
+    void Promise.all([
+      walletService.getPaymentSettings(),
+      walletService.getAdminTransactions(),
+    ])
+      .then(([remoteSettings, remoteTransactions]) => {
+        if (cancelled) return;
+        setSettings(remoteSettings);
+        setTransactions(remoteTransactions);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          showToast(
+            error instanceof Error ? error.message : 'Không thể tải dữ liệu thanh toán.',
+            'error',
+          );
+        }
+      });
     return () => {
-      window.clearTimeout(timer);
-      unsub();
+      cancelled = true;
     };
-  }, []);
+  }, [showToast]);
 
   // Save changes
-  const handleSaveSettings = () => {
-    paymentService.updateSettings(settings);
-    showToast('Đã lưu cấu hình thanh toán thành công!', 'success');
+  const handleSaveSettings = async () => {
+    try {
+      const saved = await walletService.updatePaymentSettings(settings);
+      setSettings(saved);
+      showToast('Đã lưu cấu hình thanh toán vào Supabase!', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể lưu cấu hình.', 'error');
+    }
   };
 
   // Reset to default
-  const handleResetSettings = () => {
+  const handleResetSettings = async () => {
     if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt thanh toán về mặc định?')) {
-      const reset = paymentService.resetSettings();
-      setSettings(reset);
-      showToast('Đã khôi phục cài đặt thanh toán mặc định', 'info');
+      try {
+        const reset = await walletService.updatePaymentSettings(DEFAULT_PAYMENT_SETTINGS);
+        setSettings(reset);
+        showToast('Đã khôi phục cấu hình mặc định trên Supabase', 'info');
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Không thể khôi phục cấu hình.', 'error');
+      }
     }
   };
 
@@ -106,7 +120,6 @@ export default function AdminPaymentsPage() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const size = Math.min(img.width, img.height);
         canvas.width = 400;
         canvas.height = 400;
         const ctx = canvas.getContext('2d');
@@ -163,7 +176,7 @@ export default function AdminPaymentsPage() {
   };
 
   // Manual balance credit
-  const handleCreditSubmit = (e: React.FormEvent) => {
+  const handleCreditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseInt(creditAmount.replace(/\D/g, ''), 10);
     if (!creditUserId.trim()) {
@@ -175,10 +188,50 @@ export default function AdminPaymentsPage() {
       return;
     }
 
-    profileService.topUp(creditUserId.trim(), amountNum, creditMemo || 'Admin cấp số dư');
-    setTransactions(paymentService.getAllTransactions());
-    setShowCreditModal(false);
-    showToast(`Đã cộng ${amountNum.toLocaleString('vi-VN')} ₫ cho tài khoản "${creditUserId}"`, 'success');
+    try {
+      await walletService.adjustWallet(
+        creditUserId.trim(),
+        amountNum,
+        creditMemo || 'Admin cấp số dư',
+      );
+      setTransactions(await walletService.getAdminTransactions());
+      setShowCreditModal(false);
+      showToast(
+        `Đã cộng ${amountNum.toLocaleString('vi-VN')} ₫ cho tài khoản "${creditUserId}"`,
+        'success',
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể cộng số dư.', 'error');
+    }
+  };
+
+  const handleReviewTopup = async (requestId: string, approve: boolean) => {
+    const confirmed = window.confirm(
+      approve
+        ? 'Bạn đã kiểm tra tài khoản ngân hàng và chắc chắn tiền đã vào?'
+        : 'Từ chối yêu cầu nạp tiền này?',
+    );
+    if (!confirmed) return;
+
+    const note = window.prompt(
+      approve ? 'Ghi chú đối soát (không bắt buộc):' : 'Lý do từ chối (không bắt buộc):',
+      '',
+    );
+    if (note === null) return;
+
+    setReviewingTopupId(requestId);
+    try {
+      await walletService.reviewTopup(requestId, approve, note);
+      setTransactions(await walletService.getAdminTransactions());
+      showToast(
+        approve ? 'Đã xác nhận tiền vào và cộng ví cho người dùng.' : 'Đã từ chối yêu cầu nạp tiền.',
+        approve ? 'success' : 'info',
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể xử lý yêu cầu.', 'error');
+    } finally {
+      setReviewingTopupId(null);
+    }
   };
 
   // Total calculated statistics
@@ -654,7 +707,7 @@ export default function AdminPaymentsPage() {
                     style={{ display: 'none' }}
                   />
                   <label style={{ fontSize: '13px', fontWeight: 600, color: '#D1D5DB', display: 'block', marginBottom: '8px' }}>
-                    Tùy chọn tải lên Ảnh Mã QR riêng (Thay thế mã QR tự động)
+                    Tải ảnh QR nhận tiền để hiển thị cho người dùng
                   </label>
 
                   <div style={{ display: 'flex', gap: '10px' }}>
@@ -762,7 +815,7 @@ export default function AdminPaymentsPage() {
                 }}
               >
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', padding: '3px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 700, marginBottom: '10px' }}>
-                  <QrCode size={12} /> VIETQR CHUYỂN KHOẢN TỰ ĐỘNG
+                  <QrCode size={12} /> QR CHUYỂN KHOẢN
                 </div>
 
                 <div style={{ fontSize: '17px', fontWeight: 800, color: '#fff', marginBottom: '4px' }}>
@@ -1154,7 +1207,7 @@ export default function AdminPaymentsPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
                 {[
-                  { key: 'vietqr', title: 'Chuyển khoản VietQR', desc: 'Quét QR tự động nhận tiền qua App Ngân hàng', color: '#10B981' },
+                  { key: 'vietqr', title: 'Chuyển khoản QR', desc: 'Admin đối chiếu ngân hàng và duyệt giao dịch', color: '#10B981' },
                   { key: 'momo', title: 'Ví điện tử MoMo', desc: 'Thanh toán quét mã hoặc ứng dụng MoMo', color: '#EC4899' },
                   { key: 'zalopay', title: 'Ví điện tử ZaloPay', desc: 'Quét mã qua Zalo hoặc ZaloPay', color: '#3B82F6' },
                   { key: 'card', title: 'Thẻ ATM / Visa / Napas', desc: 'Cổng thanh toán thẻ nội địa và quốc tế', color: '#F59E0B' },
@@ -1558,18 +1611,35 @@ export default function AdminPaymentsPage() {
                     <th style={{ padding: '12px 14px' }}>MÔ TẢ</th>
                     <th style={{ padding: '12px 14px' }}>THỜI GIAN</th>
                     <th style={{ padding: '12px 14px' }}>TRẠNG THÁI</th>
+                    <th style={{ padding: '12px 14px' }}>THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#6B7280' }}>
+                      <td colSpan={8} style={{ padding: '36px', textAlign: 'center', color: '#6B7280' }}>
                         Không có giao dịch nào phù hợp với bộ lọc
                       </td>
                     </tr>
                   ) : (
                     filteredTransactions.map((tx) => {
                       const isPositive = (tx.amount || 0) > 0;
+                      const statusLabel = tx.status === 'success'
+                        ? 'Thành công'
+                        : tx.status === 'submitted'
+                          ? 'Chờ admin duyệt'
+                          : tx.status === 'cancelled'
+                            ? 'Đã từ chối'
+                            : tx.status === 'expired'
+                              ? 'Hết hạn'
+                              : 'Chờ thanh toán';
+                      const statusColor = tx.status === 'success'
+                        ? '#10B981'
+                        : tx.status === 'submitted'
+                          ? '#38BDF8'
+                          : tx.status === 'cancelled' || tx.status === 'expired'
+                            ? '#EF4444'
+                            : '#F59E0B';
                       return (
                         <tr
                           key={tx.id}
@@ -1611,12 +1681,34 @@ export default function AdminPaymentsPage() {
                                 fontWeight: 700,
                                 padding: '2px 8px',
                                 borderRadius: '12px',
-                                background: tx.status === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                                color: tx.status === 'success' ? '#10B981' : '#F59E0B',
+                                background: `${statusColor}20`,
+                                color: statusColor,
                               }}
                             >
-                              <CheckCircle2 size={12} /> {tx.status === 'success' ? 'Thành công' : 'Chờ xử lý'}
+                              <CheckCircle2 size={12} /> {statusLabel}
                             </span>
+                          </td>
+                          <td style={{ padding: '12px 14px' }}>
+                            {tx.type === 'topup' && tx.status === 'submitted' ? (
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  disabled={reviewingTopupId === tx.id}
+                                  onClick={() => void handleReviewTopup(tx.id, true)}
+                                  style={{ border: 0, borderRadius: '6px', padding: '6px 9px', background: '#059669', color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+                                >
+                                  Duyệt
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reviewingTopupId === tx.id}
+                                  onClick={() => void handleReviewTopup(tx.id, false)}
+                                  style={{ border: '1px solid rgba(239,68,68,.5)', borderRadius: '6px', padding: '6px 9px', background: 'transparent', color: '#F87171', cursor: 'pointer', fontWeight: 700 }}
+                                >
+                                  Từ chối
+                                </button>
+                              </div>
+                            ) : '—'}
                           </td>
                         </tr>
                       );
