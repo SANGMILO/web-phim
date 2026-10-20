@@ -39,38 +39,9 @@ const DEFAULT_PROFILE: UserProfileData = {
   bio: 'Người yêu điện ảnh đích thực. Thích trải nghiệm âm thanh vòm và hình ảnh 4K HDR.',
   phone: '0988 123 456',
   favoriteGenres: ['Hành động', 'Khoa học viễn tưởng', 'Phiêu lưu'],
-  balance: 150000,
-  isVip: true,
-  vipExpiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-  transactions: [
-    {
-      id: 'tx-init-1',
-      type: 'topup',
-      amount: 200000,
-      description: 'Nạp tiền vào tài khoản qua VietQR (MB Bank)',
-      createdAt: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
-      status: 'success',
-      method: 'VietQR',
-    },
-    {
-      id: 'tx-init-2',
-      type: 'vip_month',
-      amount: -59000,
-      description: 'Đăng ký gói CINEVERSE VIP 1 Tháng (4K HDR)',
-      createdAt: new Date(Date.now() - 3600000 * 24 * 2 + 60000).toISOString(),
-      status: 'success',
-      method: 'Ví CineVerse',
-    },
-    {
-      id: 'tx-init-3',
-      type: 'topup',
-      amount: 50000,
-      description: 'Khuyến mãi thành viên mới gia nhập CineVerse',
-      createdAt: new Date(Date.now() - 3600000 * 24 * 3).toISOString(),
-      status: 'success',
-      method: 'CineVerse Gift',
-    },
-  ],
+  balance: 0,
+  isVip: false,
+  transactions: [],
 };
 
 let memoryStore: Record<string, UserProfileData> | null = null;
@@ -123,20 +94,9 @@ export const profileService = {
       bio: 'Thành viên CineVerse',
       phone: '',
       favoriteGenres: ['Hành động', 'Khoa học viễn tưởng'],
-      balance: 150000,
-      isVip: true,
-      vipExpiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
-      transactions: [
-        {
-          id: `tx-init-${Date.now()}`,
-          type: 'topup',
-          amount: 150000,
-          description: 'Quà tặng chào mừng thành viên mới',
-          createdAt: new Date().toISOString(),
-          status: 'success',
-          method: 'CineVerse Gift',
-        },
-      ],
+      balance: 0,
+      isVip: false,
+      transactions: [],
     };
 
     store[userId] = newProfile;
@@ -155,74 +115,6 @@ export const profileService = {
     store[userId] = updated;
     persistStore(store, true);
     return updated;
-  },
-
-  topUp(userId: string, amount: number, method = 'VietQR'): UserProfileData {
-    const store = getStore();
-    const current = store[userId] || this.getProfile(userId);
-    const newTransaction: WalletTransaction = {
-      id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      type: 'topup',
-      amount,
-      description: `Nạp tiền vào tài khoản qua ${method}`,
-      createdAt: new Date().toISOString(),
-      status: 'success',
-      method,
-    };
-
-    const updated: UserProfileData = {
-      ...current,
-      balance: (current.balance || 0) + amount,
-      transactions: [newTransaction, ...(current.transactions || [])],
-    };
-    store[userId] = updated;
-    persistStore(store, true);
-    return updated;
-  },
-
-  upgradeVip(
-    userId: string,
-    plan: 'vip_month' | 'vip_year'
-  ): { success: boolean; error?: string; profile: UserProfileData } {
-    const store = getStore();
-    const current = store[userId] || this.getProfile(userId);
-    const cost = plan === 'vip_month' ? 59000 : 590000;
-    const durationDays = plan === 'vip_month' ? 30 : 365;
-    const planName = plan === 'vip_month' ? 'VIP Tháng (30 ngày)' : 'VIP Năm (365 ngày)';
-
-    if ((current.balance || 0) < cost) {
-      return {
-        success: false,
-        error: `Số dư không đủ (${(current.balance || 0).toLocaleString('vi-VN')} ₫). Cần ${cost.toLocaleString('vi-VN')} ₫. Vui lòng nạp thêm tiền.`,
-        profile: current,
-      };
-    }
-
-    const currentExpiry = current.vipExpiresAt ? new Date(current.vipExpiresAt).getTime() : Date.now();
-    const baseTime = currentExpiry > Date.now() ? currentExpiry : Date.now();
-    const newExpiry = new Date(baseTime + durationDays * 24 * 3600 * 1000).toISOString();
-
-    const newTransaction: WalletTransaction = {
-      id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      type: plan,
-      amount: -cost,
-      description: `Nâng cấp gói ${planName}`,
-      createdAt: new Date().toISOString(),
-      status: 'success',
-      method: 'Ví CineVerse',
-    };
-
-    const updated: UserProfileData = {
-      ...current,
-      balance: (current.balance || 0) - cost,
-      isVip: true,
-      vipExpiresAt: newExpiry,
-      transactions: [newTransaction, ...(current.transactions || [])],
-    };
-
-    store[userId] = updated;
-    persistStore(store, true);
-    return { success: true, profile: updated };
   },
 
   subscribe(callback: () => void): () => void {

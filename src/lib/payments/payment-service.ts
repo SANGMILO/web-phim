@@ -2,10 +2,6 @@
 
 import {
   PaymentSettings,
-  BankConfig,
-  EWalletConfig,
-  CardGatewayConfig,
-  PresetPackage,
   AdminTransactionItem,
 } from '@/types/payment';
 
@@ -55,32 +51,32 @@ function isBrowser(): boolean {
 export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   methods: {
     vietqr: true,
-    momo: true,
-    zalopay: true,
-    card: true,
+    momo: false,
+    zalopay: false,
+    card: false,
   },
   bank: {
     bankId: 'MB',
     bankName: 'MB BANK (Quân Đội)',
-    accountNumber: '9988 2233 6688',
-    accountHolder: 'CINEVERSE VIETNAM',
+    accountNumber: '',
+    accountHolder: '',
     memoPrefix: 'CV NAP',
     note: 'Quét mã QR tự động nhận tiền trong 30s qua App Ngân hàng (MB, VCB, Techcombank...)',
   },
   momo: {
-    phone: '0988 123 456',
-    accountHolder: 'CINEVERSE VIETNAM',
-    note: 'Thanh toán trực tiếp bằng ứng dụng MoMo',
+    phone: '',
+    accountHolder: '',
+    note: 'Chưa kích hoạt xác minh tự động',
   },
   zalopay: {
-    phone: '0988 123 456',
-    accountHolder: 'CINEVERSE VIETNAM',
-    note: 'Quét mã qua Zalo hoặc ZaloPay',
+    phone: '',
+    accountHolder: '',
+    note: 'Chưa kích hoạt xác minh tự động',
   },
   card: {
-    gatewayName: 'Cổng thanh toán Napas / OnePay',
-    note: 'Cổng thanh toán bảo mật Napas / OnePay',
-    instructions: 'Hỗ trợ thẻ nội địa NAPAS hơn 40 ngân hàng và thẻ quốc tế Visa, Mastercard, JCB.',
+    gatewayName: 'Chưa cấu hình',
+    note: 'Chưa kích hoạt cổng thẻ',
+    instructions: 'Chỉ bật khi đã tích hợp webhook xác minh từ nhà cung cấp cổng thẻ.',
   },
   presetPackages: [
     { id: 'p-50k', amount: 50000, badge: '' },

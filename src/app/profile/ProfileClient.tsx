@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   User as UserIcon,
   Mail,
@@ -12,7 +11,6 @@ import {
   Wallet,
   Crown,
   Sparkles,
-  Clock,
   Check,
   CheckCircle2,
   AlertCircle,
@@ -20,12 +18,9 @@ import {
   EyeOff,
   QrCode,
   Zap,
-  Award,
   Smartphone,
   History,
   Film,
-  Bookmark,
-  ChevronRight,
   ArrowRight,
   X,
   Copy,
@@ -39,11 +34,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { profileService, type UserProfileData, type WalletTransaction } from '@/lib/profile/profile-service';
+import { profileService, type UserProfileData } from '@/lib/profile/profile-service';
 import { supabaseProfileService } from '@/lib/profile/supabase-profile-service';
 import { paymentService } from '@/lib/payments/payment-service';
+import { walletService, type TopupRequest } from '@/lib/payments/wallet-service';
 import type { PaymentSettings } from '@/types/payment';
-import { useWatchlist } from '@/components/providers/WatchlistProvider';
 
 // Authentic Cinema Avatar Presets (Zero AI feel, Studio Monograms & Cinema Tools)
 interface AvatarPreset {
@@ -81,14 +76,6 @@ const GENRE_OPTIONS = [
   'Hoạt hình',
   'Tài liệu',
   'Chiến tranh',
-];
-
-const TOP_UP_AMOUNTS = [
-  { amount: 50000, label: '50.000 ₫', bonus: '' },
-  { amount: 100000, label: '100.000 ₫', bonus: 'Phổ biến' },
-  { amount: 200000, label: '200.000 ₫', bonus: '+10% Bonus' },
-  { amount: 500000, label: '500.000 ₫', bonus: '+20% VIP Bonus' },
-  { amount: 1000000, label: '1.000.000 ₫', bonus: '+25% King' },
 ];
 
 // Robust Avatar Renderer
@@ -162,10 +149,8 @@ function renderAvatarBadge(
 }
 
 export function ProfileClient() {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, updateUser, updatePassword, loginDemo } = useAuth();
-  const { count: watchlistCount } = useWatchlist();
 
   const [activeTab, setActiveTab] = useState<'info' | 'security' | 'wallet' | 'vip' | 'history'>('info');
 
@@ -204,6 +189,21 @@ export function ProfileClient() {
   const [qrCountdown, setQrCountdown] = useState<number>(900); // 15 mins in sec
   const [walletToast, setWalletToast] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const [activeTopup, setActiveTopup] = useState<TopupRequest | null>(null);
+  const [isCreatingTopup, setIsCreatingTopup] = useState(false);
+  const [isCheckingTopup, setIsCheckingTopup] = useState(false);
+  const authenticatedUserId = user?.id;
+
+  const syncWalletSnapshot = useCallback(async () => {
+    if (!authenticatedUserId) return;
+    const snapshot = await walletService.getSnapshot(authenticatedUserId);
+    const synced = profileService.updateProfile(authenticatedUserId, {
+      balance: snapshot.balance,
+      transactions: snapshot.transactions,
+    });
+    setProfile(synced);
+    setPaymentConfig(snapshot.settings);
+  }, [authenticatedUserId]);
 
   // Keep profile & payment config in sync safely
   useEffect(() => {
@@ -212,12 +212,8 @@ export function ProfileClient() {
       setProfile(refreshed);
     });
 
-    const unsubscribePayment = paymentService.subscribe(() => {
-      setPaymentConfig(paymentService.getSettings());
-    });
-
     let cancelled = false;
-    const authenticatedUserId = user?.id;
+    let walletTimer: number | undefined;
     if (authenticatedUserId) {
       void supabaseProfileService
         .getMyProfile(authenticatedUserId)
@@ -252,14 +248,24 @@ export function ProfileClient() {
             );
           }
         });
+
+      walletTimer = window.setTimeout(() => {
+        void syncWalletSnapshot().catch((error: unknown) => {
+          if (!cancelled) {
+            setWalletToast(
+              error instanceof Error ? error.message : 'Không thể tải số dư ví từ Supabase.',
+            );
+          }
+        });
+      }, 0);
     }
 
     return () => {
       cancelled = true;
+      if (walletTimer !== undefined) window.clearTimeout(walletTimer);
       unsubscribeProfile();
-      unsubscribePayment();
     };
-  }, [currentUserId, user?.id, user?.name, user?.email, updateUser]);
+  }, [currentUserId, authenticatedUserId, user?.name, user?.email, updateUser, syncWalletSnapshot]);
 
   // QR Countdown timer
   useEffect(() => {
@@ -269,6 +275,35 @@ export function ProfileClient() {
     }, 1000);
     return () => clearInterval(interval);
   }, [showQrModal]);
+
+  useEffect(() => {
+    if (!showQrModal || !activeTopup || activeTopup.status !== 'pending') return;
+
+    let cancelled = false;
+    const checkStatus = async () => {
+      try {
+        const latest = await walletService.getTopup(activeTopup.id);
+        if (cancelled || !latest) return;
+        setActiveTopup(latest);
+        if (latest.status === 'paid') {
+          await syncWalletSnapshot();
+          if (cancelled) return;
+          setShowQrModal(false);
+          setWalletToast(
+            `Đã xác nhận giao dịch ${latest.amount.toLocaleString('vi-VN')} ₫ từ ngân hàng.`,
+          );
+        }
+      } catch {
+        // A temporary polling failure must not alter the payment state.
+      }
+    };
+
+    const interval = window.setInterval(() => void checkStatus(), 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeTopup, showQrModal, syncWalletSnapshot]);
 
   // Handle Photo Upload
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -407,42 +442,74 @@ export function ProfileClient() {
   // Handle Top-up Modal
   const finalTopUpAmount = customAmount ? parseInt(customAmount, 10) || selectedAmount : selectedAmount;
 
-  const handleOpenPayment = () => {
+  const handleOpenPayment = async () => {
     if (finalTopUpAmount < 10000) {
       alert('Số tiền nạp tối thiểu là 10.000 ₫');
       return;
     }
-    setQrCountdown(900);
-    setShowQrModal(true);
+    if (!user?.id) {
+      alert('Bạn cần đăng nhập để tạo yêu cầu nạp tiền.');
+      return;
+    }
+    if (selectedPaymentMethod !== 'vietqr') {
+      alert('Phương thức này chưa có webhook xác minh. Vui lòng dùng VietQR.');
+      return;
+    }
+
+    setIsCreatingTopup(true);
+    try {
+      const request = await walletService.createTopup(finalTopUpAmount);
+      setActiveTopup(request);
+      setQrCountdown(
+        Math.max(0, Math.floor((new Date(request.expiresAt).getTime() - Date.now()) / 1000)),
+      );
+      setShowQrModal(true);
+    } catch (error) {
+      setWalletToast(
+        error instanceof Error ? error.message : 'Không thể tạo yêu cầu nạp tiền.',
+      );
+    } finally {
+      setIsCreatingTopup(false);
+    }
   };
 
-  const handleConfirmTopUp = () => {
-    const methodNames: Record<string, string> = {
-      vietqr: 'VietQR (Ngân hàng)',
-      momo: 'Ví MoMo',
-      zalopay: 'Ví ZaloPay',
-      card: 'Thẻ Quốc tế / Napas',
-    };
-    profileService.topUp(currentUserId, finalTopUpAmount, methodNames[selectedPaymentMethod]);
-    setShowQrModal(false);
-    setWalletToast(`Nạp thành công ${finalTopUpAmount.toLocaleString('vi-VN')} ₫ vào Ví CineVerse!`);
-    setTimeout(() => setWalletToast(null), 4000);
+  const handleConfirmTopUp = async () => {
+    if (!activeTopup) return;
+    setIsCheckingTopup(true);
+    try {
+      const latest = await walletService.getTopup(activeTopup.id);
+      if (!latest) throw new Error('Không tìm thấy yêu cầu nạp tiền.');
+      setActiveTopup(latest);
+      if (latest.status === 'paid') {
+        await syncWalletSnapshot();
+        setShowQrModal(false);
+        setWalletToast(`Đã cộng ${latest.amount.toLocaleString('vi-VN')} ₫ vào ví.`);
+      } else if (latest.status === 'expired') {
+        setWalletToast('Yêu cầu đã hết hạn. Vui lòng tạo mã QR mới.');
+      } else {
+        setWalletToast('Chưa nhận được xác nhận từ ngân hàng. Hệ thống vẫn đang tự kiểm tra.');
+      }
+    } catch (error) {
+      setWalletToast(error instanceof Error ? error.message : 'Không thể kiểm tra giao dịch.');
+    } finally {
+      setIsCheckingTopup(false);
+    }
   };
 
   // Handle VIP Upgrade
-  const handleUpgradeVip = (plan: 'vip_month' | 'vip_year') => {
-    const res = profileService.upgradeVip(currentUserId, plan);
-    if (!res.success) {
-      alert(res.error);
+  const handleUpgradeVip = async (plan: 'vip_month' | 'vip_year') => {
+    try {
+      await walletService.purchaseVip(plan);
+      await syncWalletSnapshot();
+      setWalletToast(
+        plan === 'vip_month'
+          ? 'Chúc mừng bạn đã gia hạn thành công CINEVERSE VIP 1 Tháng!'
+          : 'Chúc mừng bạn đã sở hữu gói CINEVERSE VIP 1 Năm!',
+      );
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Không thể đăng ký VIP.');
       setActiveTab('wallet');
-      return;
     }
-    setWalletToast(
-      plan === 'vip_month'
-        ? 'Chúc mừng bạn đã gia hạn thành công CINEVERSE VIP 1 Tháng!'
-        : 'Chúc mừng bạn đã sở hữu gói CINEVERSE VIP 1 Năm (Tiết kiệm 30%)!'
-    );
-    setTimeout(() => setWalletToast(null), 4500);
   };
 
   // Calculate password strength
@@ -1695,6 +1762,7 @@ export function ProfileClient() {
               <button
                 type="button"
                 onClick={handleOpenPayment}
+                disabled={isCreatingTopup}
                 style={{
                   width: '100%',
                   padding: '14px 20px',
@@ -1704,7 +1772,8 @@ export function ProfileClient() {
                   color: '#08090C',
                   fontSize: '15px',
                   fontWeight: 800,
-                  cursor: 'pointer',
+                  cursor: isCreatingTopup ? 'wait' : 'pointer',
+                  opacity: isCreatingTopup ? 0.7 : 1,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1713,7 +1782,9 @@ export function ProfileClient() {
                 }}
               >
                 <Zap size={18} />
-                Tiến hành nạp {finalTopUpAmount.toLocaleString('vi-VN')} ₫
+                {isCreatingTopup
+                  ? 'Đang tạo mã thanh toán an toàn...'
+                  : `Tiến hành nạp ${finalTopUpAmount.toLocaleString('vi-VN')} ₫`}
               </button>
             </div>
 
@@ -2234,8 +2305,8 @@ export function ProfileClient() {
                       paymentService.getVietQrUrl({
                         bankId: paymentConfig.bank.bankId,
                         accountNumber: paymentConfig.bank.accountNumber,
-                        amount: finalTopUpAmount,
-                        memo: `${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`,
+                        amount: activeTopup?.amount || finalTopUpAmount,
+                        memo: activeTopup?.paymentCode || '',
                         accountHolder: paymentConfig.bank.accountHolder,
                       })
                     }
@@ -2263,7 +2334,7 @@ export function ProfileClient() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#8E8F99' }}>Số tiền nạp:</span>
                 <span style={{ fontWeight: 800, color: '#FBBF24', fontSize: '15px' }}>
-                  {finalTopUpAmount.toLocaleString('vi-VN')} ₫
+                  {(activeTopup?.amount || finalTopUpAmount).toLocaleString('vi-VN')} ₫
                 </span>
               </div>
 
@@ -2297,11 +2368,11 @@ export function ProfileClient() {
                     <span style={{ color: '#8E8F99' }}>Nội dung CK:</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontWeight: 700, color: '#10B981' }}>
-                        {paymentConfig.bank.memoPrefix} {currentUserId.toUpperCase()}
+                        {activeTopup?.paymentCode || 'Đang tạo mã...'}
                       </span>
                       <button
                         type="button"
-                        onClick={() => handleCopyText(`${paymentConfig.bank.memoPrefix} ${currentUserId.toUpperCase()}`, 'Nội dung chuyển khoản')}
+                        onClick={() => handleCopyText(activeTopup?.paymentCode || '', 'Nội dung chuyển khoản')}
                         style={{ background: 'transparent', border: 'none', color: '#10B981', cursor: 'pointer', padding: '2px' }}
                         title="Sao chép nội dung"
                       >
@@ -2412,11 +2483,15 @@ export function ProfileClient() {
             </div>
 
             <div style={{ fontSize: '11px', color: '#8E8F99', marginBottom: '14px' }}>
-              Mã giao dịch tự động hết hạn sau: <strong style={{ color: '#F59E0B' }}>{Math.floor(qrCountdown / 60)}:{(qrCountdown % 60).toString().padStart(2, '0')}</strong>
+              Hệ thống chỉ cộng tiền sau khi SePay xác minh giao dịch đúng mã và đúng số tiền.
+              <br />
+              Mã giao dịch tự động hết hạn sau:{' '}
+              <strong style={{ color: '#F59E0B' }}>{Math.floor(qrCountdown / 60)}:{(qrCountdown % 60).toString().padStart(2, '0')}</strong>
             </div>
 
             <button
               onClick={handleConfirmTopUp}
+              disabled={isCheckingTopup || !activeTopup}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -2426,14 +2501,16 @@ export function ProfileClient() {
                 color: '#fff',
                 fontSize: '14px',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: isCheckingTopup ? 'wait' : 'pointer',
+                opacity: isCheckingTopup ? 0.75 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
               }}
             >
-              <CheckCircle2 size={16} /> Tôi đã chuyển tiền thành công (Xác nhận)
+              <CheckCircle2 size={16} />{' '}
+              {isCheckingTopup ? 'Đang hỏi trạng thái ngân hàng...' : 'Kiểm tra trạng thái giao dịch'}
             </button>
           </div>
         </div>

@@ -16,8 +16,6 @@ import {
   ExternalLink,
   ShieldCheck,
   Search,
-  Filter,
-  ArrowUpRight,
   Plus,
   Coins,
   DollarSign,
@@ -32,12 +30,9 @@ import {
   SUPPORTED_BANKS,
   DEFAULT_PAYMENT_SETTINGS,
 } from '@/lib/payments/payment-service';
-import { profileService } from '@/lib/profile/profile-service';
+import { walletService } from '@/lib/payments/wallet-service';
 import type {
   PaymentSettings,
-  BankConfig,
-  EWalletConfig,
-  CardGatewayConfig,
   PresetPackage,
   AdminTransactionItem,
 } from '@/types/payment';
@@ -63,32 +58,50 @@ export default function AdminPaymentsPage() {
 
   // Load settings & transactions
   useEffect(() => {
-    const unsub = paymentService.subscribe(() => {
-      setSettings(paymentService.getSettings());
-      setTransactions(paymentService.getAllTransactions());
-    });
-    const timer = window.setTimeout(() => {
-      setSettings(paymentService.getSettings());
-      setTransactions(paymentService.getAllTransactions());
-    }, 0);
+    let cancelled = false;
+    void Promise.all([
+      walletService.getPaymentSettings(),
+      walletService.getAdminTransactions(),
+    ])
+      .then(([remoteSettings, remoteTransactions]) => {
+        if (cancelled) return;
+        setSettings(remoteSettings);
+        setTransactions(remoteTransactions);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          showToast(
+            error instanceof Error ? error.message : 'Không thể tải dữ liệu thanh toán.',
+            'error',
+          );
+        }
+      });
     return () => {
-      window.clearTimeout(timer);
-      unsub();
+      cancelled = true;
     };
-  }, []);
+  }, [showToast]);
 
   // Save changes
-  const handleSaveSettings = () => {
-    paymentService.updateSettings(settings);
-    showToast('Đã lưu cấu hình thanh toán thành công!', 'success');
+  const handleSaveSettings = async () => {
+    try {
+      const saved = await walletService.updatePaymentSettings(settings);
+      setSettings(saved);
+      showToast('Đã lưu cấu hình thanh toán vào Supabase!', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể lưu cấu hình.', 'error');
+    }
   };
 
   // Reset to default
-  const handleResetSettings = () => {
+  const handleResetSettings = async () => {
     if (confirm('Bạn có chắc muốn khôi phục toàn bộ cài đặt thanh toán về mặc định?')) {
-      const reset = paymentService.resetSettings();
-      setSettings(reset);
-      showToast('Đã khôi phục cài đặt thanh toán mặc định', 'info');
+      try {
+        const reset = await walletService.updatePaymentSettings(DEFAULT_PAYMENT_SETTINGS);
+        setSettings(reset);
+        showToast('Đã khôi phục cấu hình mặc định trên Supabase', 'info');
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Không thể khôi phục cấu hình.', 'error');
+      }
     }
   };
 
@@ -106,7 +119,6 @@ export default function AdminPaymentsPage() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const size = Math.min(img.width, img.height);
         canvas.width = 400;
         canvas.height = 400;
         const ctx = canvas.getContext('2d');
@@ -163,7 +175,7 @@ export default function AdminPaymentsPage() {
   };
 
   // Manual balance credit
-  const handleCreditSubmit = (e: React.FormEvent) => {
+  const handleCreditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseInt(creditAmount.replace(/\D/g, ''), 10);
     if (!creditUserId.trim()) {
@@ -175,10 +187,21 @@ export default function AdminPaymentsPage() {
       return;
     }
 
-    profileService.topUp(creditUserId.trim(), amountNum, creditMemo || 'Admin cấp số dư');
-    setTransactions(paymentService.getAllTransactions());
-    setShowCreditModal(false);
-    showToast(`Đã cộng ${amountNum.toLocaleString('vi-VN')} ₫ cho tài khoản "${creditUserId}"`, 'success');
+    try {
+      await walletService.adjustWallet(
+        creditUserId.trim(),
+        amountNum,
+        creditMemo || 'Admin cấp số dư',
+      );
+      setTransactions(await walletService.getAdminTransactions());
+      setShowCreditModal(false);
+      showToast(
+        `Đã cộng ${amountNum.toLocaleString('vi-VN')} ₫ cho tài khoản "${creditUserId}"`,
+        'success',
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể cộng số dư.', 'error');
+    }
   };
 
   // Total calculated statistics
